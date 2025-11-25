@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir openmim mmengine && \
     pip install --no-cache-dir mmdet==3.2.0 mmpose==1.3.2
 
 # Copy project files
-COPY pyproject.toml ./
+COPY pyproject.toml README.md ./
 COPY anime_face_detector ./anime_face_detector/
 
 # Install the package (without OpenMMLab deps, already installed)
