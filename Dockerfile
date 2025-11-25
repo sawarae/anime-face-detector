@@ -1,5 +1,5 @@
-# Use PyTorch image with CUDA support
-FROM pytorch/pytorch:2.4.0-cuda12.1-cudnn9-runtime
+# Use PyTorch devel image with CUDA support (includes compiler for mmcv build)
+FROM pytorch/pytorch:2.4.0-cuda12.1-cudnn9-devel
 
 WORKDIR /app
 
@@ -10,9 +10,9 @@ RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install OpenMMLab packages with pre-built wheels for CUDA 12.1
+# Install OpenMMLab packages with pre-built wheels
 RUN pip install --no-cache-dir openmim mmengine && \
-    pip install --no-cache-dir mmcv==2.1.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4.0/index.html && \
+    mim install mmcv==2.1.0 && \
     pip install --no-cache-dir mmdet==3.2.0 mmpose==1.3.2
 
 # Copy project files
