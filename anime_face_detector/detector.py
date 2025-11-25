@@ -2,51 +2,53 @@ from __future__ import annotations
 
 import pathlib
 import warnings
-from typing import Optional, Union
 
 import cv2
 import numpy as np
 import torch.nn as nn
-from mmengine.config import Config
 from mmdet.apis import inference_detector, init_detector
+from mmengine.config import Config
 from mmpose.apis import inference_topdown, init_model
 
 
 class LandmarkDetector:
     def __init__(
-            self,
-            landmark_detector_config_or_path: Union[Config, str, pathlib.Path],
-            landmark_detector_checkpoint_path: Union[str, pathlib.Path],
-            face_detector_config_or_path: Optional[Union[Config, str,
-                                                         pathlib.Path]] = None,
-            face_detector_checkpoint_path: Optional[Union[
-                str, pathlib.Path]] = None,
-            device: str = 'cuda:0',
-            flip_test: bool = True,
-            box_scale_factor: float = 1.1):
+        self,
+        landmark_detector_config_or_path: Config | str | pathlib.Path,
+        landmark_detector_checkpoint_path: str | pathlib.Path,
+        face_detector_config_or_path: Config | str | pathlib.Path | None = None,
+        face_detector_checkpoint_path: str | pathlib.Path | None = None,
+        device: str = 'cuda:0',
+        flip_test: bool = True,
+        box_scale_factor: float = 1.1,
+    ):
         landmark_config = self._load_config(landmark_detector_config_or_path)
         face_detector_config = self._load_config(face_detector_config_or_path)
 
         self.landmark_detector = self._init_pose_model(
-            landmark_config, landmark_detector_checkpoint_path, device,
-            flip_test)
+            landmark_config, landmark_detector_checkpoint_path, device, flip_test
+        )
         self.face_detector = self._init_face_detector(
-            face_detector_config, face_detector_checkpoint_path, device)
+            face_detector_config, face_detector_checkpoint_path, device
+        )
 
         self.box_scale_factor = box_scale_factor
 
     @staticmethod
     def _load_config(
-        config_or_path: Optional[Union[Config, str, pathlib.Path]]
-    ) -> Optional[Config]:
+        config_or_path: Config | str | pathlib.Path | None,
+    ) -> Config | None:
         if config_or_path is None or isinstance(config_or_path, Config):
             return config_or_path
         return Config.fromfile(config_or_path)
 
     @staticmethod
-    def _init_pose_model(config: Config,
-                         checkpoint_path: Union[str, pathlib.Path],
-                         device: str, flip_test: bool) -> nn.Module:
+    def _init_pose_model(
+        config: Config,
+        checkpoint_path: str | pathlib.Path,
+        device: str,
+        flip_test: bool,
+    ) -> nn.Module:
         if isinstance(checkpoint_path, pathlib.Path):
             checkpoint_path = checkpoint_path.as_posix()
         model = init_model(config, checkpoint_path, device=device)
@@ -56,10 +58,9 @@ class LandmarkDetector:
         return model
 
     @staticmethod
-    def _init_face_detector(config: Optional[Config],
-                            checkpoint_path: Optional[Union[str,
-                                                            pathlib.Path]],
-                            device: str) -> Optional[nn.Module]:
+    def _init_face_detector(
+        config: Config | None, checkpoint_path: str | pathlib.Path | None, device: str
+    ) -> nn.Module | None:
         if config is not None:
             if isinstance(checkpoint_path, pathlib.Path):
                 checkpoint_path = checkpoint_path.as_posix()
@@ -98,8 +99,8 @@ class LandmarkDetector:
         return boxes
 
     def _detect_landmarks(
-            self, image: np.ndarray,
-            boxes: list[np.ndarray]) -> list[dict[str, np.ndarray]]:
+        self, image: np.ndarray, boxes: list[np.ndarray]
+    ) -> list[dict[str, np.ndarray]]:
         # mmpose 1.x uses inference_topdown with different interface
         # Convert boxes to numpy array format expected by inference_topdown
         bboxes = np.array(boxes) if boxes else np.empty((0, 5))
@@ -115,16 +116,13 @@ class LandmarkDetector:
             keypoint_scores = pred_instances.keypoint_scores[0]  # (K,)
             # Combine keypoints and scores to [x, y, score] format
             keypoints_with_scores = np.concatenate(
-                [keypoints, keypoint_scores[:, np.newaxis]], axis=1)
-            preds.append({
-                'bbox': boxes[i],
-                'keypoints': keypoints_with_scores
-            })
+                [keypoints, keypoint_scores[:, np.newaxis]], axis=1
+            )
+            preds.append({'bbox': boxes[i], 'keypoints': keypoints_with_scores})
         return preds
 
     @staticmethod
-    def _load_image(
-            image_or_path: Union[np.ndarray, str, pathlib.Path]) -> np.ndarray:
+    def _load_image(image_or_path: np.ndarray | str | pathlib.Path) -> np.ndarray:
         if isinstance(image_or_path, np.ndarray):
             image = image_or_path
         elif isinstance(image_or_path, str):
@@ -137,8 +135,8 @@ class LandmarkDetector:
 
     def __call__(
         self,
-        image_or_path: Union[np.ndarray, str, pathlib.Path],
-        boxes: Optional[list[np.ndarray]] = None
+        image_or_path: np.ndarray | str | pathlib.Path,
+        boxes: list[np.ndarray] | None = None,
     ) -> list[dict[str, np.ndarray]]:
         """Detect face landmarks.
 
@@ -159,7 +157,8 @@ class LandmarkDetector:
                 warnings.warn(
                     'Neither the face detector nor the bounding box is '
                     'specified. So the entire image is treated as the face '
-                    'region.')
+                    'region.'
+                )
                 h, w = image.shape[:2]
                 boxes = [np.array([0, 0, w - 1, h - 1, 1])]
         return self._detect_landmarks(image, boxes)
