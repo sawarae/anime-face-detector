@@ -1,0 +1,14 @@
+services:
+  anime-face-detector:
+    build: .
+    volumes:
+      - ./input:/app/input
+      - ./output:/app/output
+    # For GPU support, uncomment the following:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]

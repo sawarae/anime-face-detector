@@ -1,0 +1,14 @@
+.venv/
+.git/
+.claude/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.pre-commit-config.yaml
+demo.ipynb
+assets/
+*.md
+!README.md
