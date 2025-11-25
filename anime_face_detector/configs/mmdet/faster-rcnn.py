@@ -1,5 +1,14 @@
+# mmdet 3.x config for Faster R-CNN anime face detection
+
 model = dict(
     type='FasterRCNN',
+    data_preprocessor=dict(
+        type='DetDataPreprocessor',
+        mean=[123.675, 116.28, 103.53],
+        std=[58.395, 57.12, 57.375],
+        bgr_to_rgb=True,
+        pad_size_divisor=32,
+    ),
     backbone=dict(
         type='ResNet',
         depth=50,
@@ -63,25 +72,28 @@ model = dict(
         ),
     ),
 )
+
+# test pipeline for mmdet 3.x
 test_pipeline = [
-    dict(type='LoadImageFromFile'),
-    dict(
-        type='MultiScaleFlipAug',
-        img_scale=(1333, 800),
-        flip=False,
-        transforms=[
-            dict(type='Resize', keep_ratio=True),
-            dict(type='RandomFlip'),
-            dict(
-                type='Normalize',
-                mean=[123.675, 116.28, 103.53],
-                std=[58.395, 57.12, 57.375],
-                to_rgb=True,
-            ),
-            dict(type='Pad', size_divisor=32),
-            dict(type='ImageToTensor', keys=['img']),
-            dict(type='Collect', keys=['img']),
-        ],
-    ),
+    dict(type='LoadImageFromFile', backend_args=None),
+    dict(type='Resize', scale=(1333, 800), keep_ratio=True),
+    dict(type='Pad', size_divisor=32, pad_val=dict(img=(114, 114, 114))),
+    dict(type='PackDetInputs', meta_keys=('img_id', 'img_path', 'ori_shape', 'img_shape', 'scale_factor')),
 ]
-data = dict(test=dict(pipeline=test_pipeline))
+
+# test dataloader (required for mmdet 3.x init_detector)
+test_dataloader = dict(
+    batch_size=1,
+    num_workers=0,
+    persistent_workers=False,
+    drop_last=False,
+    sampler=dict(type='DefaultSampler', shuffle=False),
+    dataset=dict(
+        type='CocoDataset',
+        data_root='',
+        ann_file='',
+        data_prefix=dict(img=''),
+        test_mode=True,
+        pipeline=test_pipeline,
+    ),
+)

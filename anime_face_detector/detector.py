@@ -52,9 +52,32 @@ class LandmarkDetector:
         if isinstance(checkpoint_path, pathlib.Path):
             checkpoint_path = checkpoint_path.as_posix()
         model = init_model(config, checkpoint_path, device=device)
-        # Set flip_test in model config if available
+
+        # Set flip_test in model's test_cfg
+        if hasattr(model, 'test_cfg') and model.test_cfg is not None:
+            model.test_cfg['flip_test'] = flip_test
         if hasattr(model.cfg, 'model') and hasattr(model.cfg.model, 'test_cfg'):
-            model.cfg.model.test_cfg.flip_test = flip_test
+            model.cfg.model.test_cfg['flip_test'] = flip_test
+
+        # Set dataset_meta with our custom keypoint info (28 keypoints for anime face)
+        if hasattr(config, 'dataset_info'):
+            dataset_meta = {
+                'dataset_name': config.dataset_info.get('dataset_name', 'anime_face'),
+                'num_keypoints': 28,
+                'keypoint_info': config.dataset_info.get('keypoint_info', {}),
+                'skeleton_info': config.dataset_info.get('skeleton_info', {}),
+                'joint_weights': config.dataset_info.get('joint_weights', [1.0] * 28),
+                'sigmas': config.dataset_info.get('sigmas', [0.025] * 28),
+                'flip_indices': config.dataset_info.get(
+                    'flip_indices', config.flip_indices if hasattr(config, 'flip_indices') else []
+                ),
+            }
+            model.dataset_meta = dataset_meta
+
+        # Copy all config attributes to model.cfg (required for inference_topdown)
+        for key in ['test_dataloader', 'test_pipeline', 'codec', 'flip_indices']:
+            if hasattr(config, key) and not hasattr(model.cfg, key):
+                setattr(model.cfg, key, getattr(config, key))
         return model
 
     @staticmethod
@@ -106,7 +129,10 @@ class LandmarkDetector:
         bboxes = np.array(boxes) if boxes else np.empty((0, 5))
 
         # inference_topdown returns list of PoseDataSample
-        results = inference_topdown(self.landmark_detector, image, bboxes)
+        # Pass only first 4 columns (x0, y0, x1, y1) - mmpose 1.x expects (N, 4) format
+        results = inference_topdown(
+            self.landmark_detector, image, bboxes[:, :4], bbox_format='xyxy'
+        )
 
         # Convert PoseDataSample to dict format for backward compatibility
         preds = []

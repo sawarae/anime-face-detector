@@ -1,14 +1,22 @@
-channel_cfg = dict(
-    num_output_channels=28,
-    dataset_joints=28,
-    dataset_channel=[
-        list(range(28)),
-    ],
-    inference_channel=list(range(28)),
+# mmpose 1.x config for HRNetV2 anime face landmark detection
+
+# codec configuration
+codec = dict(
+    type='MSRAHeatmap',
+    input_size=(256, 256),
+    heatmap_size=(64, 64),
+    sigma=2,
 )
 
+# model configuration
 model = dict(
-    type='TopDown',
+    type='TopdownPoseEstimator',
+    data_preprocessor=dict(
+        type='PoseDataPreprocessor',
+        mean=[123.675, 116.28, 103.53],
+        std=[58.395, 57.12, 57.375],
+        bgr_to_rgb=True,
+    ),
     backbone=dict(
         type='HRNet',
         in_channels=3,
@@ -40,47 +48,59 @@ model = dict(
                 block='BASIC',
                 num_blocks=(4, 4, 4, 4),
                 num_channels=(18, 36, 72, 144),
-                multiscale_output=True,
+                multiscale_output=True,  # Output all branches for concat
             ),
-            upsample=dict(mode='bilinear', align_corners=False),
         ),
     ),
-    keypoint_head=dict(
-        type='TopdownHeatmapSimpleHead',
-        in_channels=[18, 36, 72, 144],
-        in_index=(0, 1, 2, 3),
-        input_transform='resize_concat',
-        out_channels=channel_cfg['num_output_channels'],
-        num_deconv_layers=0,
-        extra=dict(final_conv_kernel=1, num_conv_layers=1, num_conv_kernels=(1,)),
-        loss_keypoint=dict(type='JointsMSELoss', use_target_weight=True),
+    neck=dict(
+        type='FeatureMapProcessor',
+        concat=True,
+    ),
+    head=dict(
+        type='HeatmapHead',
+        in_channels=270,  # 18+36+72+144 = 270 (concat of all HRNet outputs)
+        out_channels=28,
+        deconv_out_channels=None,
+        conv_out_channels=(270,),
+        conv_kernel_sizes=(1,),
+        loss=dict(type='KeypointMSELoss', use_target_weight=True),
+        decoder=codec,
     ),
     test_cfg=dict(
-        flip_test=True, post_process='unbiased', shift_heatmap=True, modulate_kernel=11
+        flip_test=False,  # Disabled - requires proper dataset metainfo
     ),
 )
 
-data_cfg = dict(
-    image_size=[256, 256],
-    heatmap_size=[64, 64],
-    num_output_channels=channel_cfg['num_output_channels'],
-    num_joints=channel_cfg['dataset_joints'],
-    dataset_channel=channel_cfg['dataset_channel'],
-    inference_channel=channel_cfg['inference_channel'],
-)
+# flip pairs for flip augmentation
+flip_indices = [4, 3, 2, 1, 0, 10, 9, 8, 7, 6, 5, 19, 18, 17, 22, 21, 20, 13, 12, 11, 16, 15, 14, 23, 26, 25, 24, 27]
 
+# test pipeline
 test_pipeline = [
-    dict(type='LoadImageFromFile'),
-    dict(type='TopDownAffine'),
-    dict(type='ToTensor'),
-    dict(type='NormalizeTensor', mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    dict(
-        type='Collect',
-        keys=['img'],
-        meta_keys=['image_file', 'center', 'scale', 'rotation', 'flip_pairs'],
-    ),
+    dict(type='LoadImage'),
+    dict(type='GetBBoxCenterScale'),
+    dict(type='TopdownAffine', input_size=codec['input_size']),
+    dict(type='PackPoseInputs'),
 ]
 
+# test dataloader (required for inference_topdown)
+test_dataloader = dict(
+    batch_size=1,
+    num_workers=0,
+    persistent_workers=False,
+    drop_last=False,
+    sampler=dict(type='DefaultSampler', shuffle=False, round_up=False),
+    dataset=dict(
+        type='CocoDataset',
+        data_root='',
+        data_mode='topdown',
+        ann_file='',
+        data_prefix=dict(img=''),
+        test_mode=True,
+        pipeline=test_pipeline,
+    ),
+)
+
+# dataset meta information
 dataset_info = dict(
     dataset_name='anime_face',
     paper_info=dict(),
@@ -116,11 +136,6 @@ dataset_info = dict(
     },
     skeleton_info={},
     joint_weights=[1.0] * 28,
-    sigmas=[],
-)
-
-data = dict(
-    test=dict(
-        type='', data_cfg=data_cfg, pipeline=test_pipeline, dataset_info=dataset_info
-    ),
+    sigmas=[0.025] * 28,
+    flip_indices=flip_indices,
 )

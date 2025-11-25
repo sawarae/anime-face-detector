@@ -15,13 +15,17 @@ RUN pip install --no-cache-dir openmim mmengine && \
     mim install mmcv==2.1.0 && \
     pip install --no-cache-dir mmdet==3.2.0 mmpose==1.3.2
 
+# Rebuild xtcocotools from source to ensure numpy compatibility
+RUN pip uninstall -y xtcocotools && \
+    pip install --no-cache-dir --no-binary :all: xtcocotools
+
 # Copy project files
 COPY pyproject.toml README.md ./
 COPY anime_face_detector ./anime_face_detector/
 
 # Install the package (without OpenMMLab deps, already installed)
 RUN pip install --no-cache-dir -e . --no-deps && \
-    pip install --no-cache-dir numpy opencv-python-headless
+    pip install --no-cache-dir opencv-python-headless
 
 # Set default command
 CMD ["python", "-c", "from anime_face_detector import create_detector; print('Import successful')"]
