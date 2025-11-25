@@ -6,13 +6,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 アニメ顔検出・ランドマーク検出ライブラリ。mmdetection（顔検出）とmmpose（28点ランドマーク検出）をベースに構築されている。
 
+## 依存関係
+
+- Python 3.10-3.11
+- PyTorch >= 2.0.0
+- OpenMMLab 2.0:
+  - mmengine >= 0.7.0
+  - mmcv >= 2.0.0
+  - mmdet >= 3.0.0 (DetDataSample API)
+  - mmpose >= 1.0.0 (PoseDataSample API)
+
 ## インストール
 
 ```bash
 pip install openmim
-mim install mmcv-full
-mim install mmdet
-mim install mmpose
+mim install mmengine mmcv mmdet mmpose
 pip install -e .
 ```
 
@@ -42,8 +50,15 @@ python demo_gradio.py --detector faster-rcnn
 
 - `anime_face_detector/__init__.py`: エントリーポイント。`create_detector()`で検出器を生成。モデルは初回実行時にGitHub Releasesから自動ダウンロード
 - `anime_face_detector/detector.py`: `LandmarkDetector`クラス。顔検出とランドマーク検出を統合
-- `anime_face_detector/configs/mmdet/`: YOLOv3、Faster R-CNNの設定ファイル
-- `anime_face_detector/configs/mmpose/hrnetv2.py`: 28点ランドマーク検出の設定
+- `anime_face_detector/configs/mmdet/`: YOLOv3、Faster R-CNNの設定ファイル（mmdet 3.x形式）
+- `anime_face_detector/configs/mmpose/hrnetv2.py`: 28点ランドマーク検出の設定（mmpose 1.x形式）
+
+### OpenMMLab 2.0 API
+
+- **Config**: `mmcv.Config` → `mmengine.Config`
+- **顔検出**: `inference_detector()` が `DetDataSample` を返す
+- **ランドマーク検出**: `inference_topdown()` が `PoseDataSample` を返す
+- **スコープ管理**: `DefaultScope.overwrite_default_scope()` でmmdet/mmposeを切り替え
 
 ### 使用例
 ```python
@@ -59,8 +74,13 @@ preds = detector(image)
 
 ## コードスタイル
 
-- フォーマッター: yapf
-- import順序: isort
-- 型チェック: mypy（`--ignore-missing-imports`）
-- 文字列: ダブルクォート
+- フォーマッター/リンター: ruff
+- 文字列: シングルクォート
+- 行の長さ: 88
 - 改行: LF
+
+### ruffコマンド
+```bash
+ruff check .        # リント
+ruff format .       # フォーマット
+```

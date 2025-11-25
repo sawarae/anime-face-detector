@@ -23,18 +23,47 @@ The result of k-means clustering of landmarks detected in real images:
 The mean images of real images belonging to each cluster:
 ![](https://raw.githubusercontent.com/hysts/anime-face-detector/main/assets/cluster_mean.jpg)
 
+## Requirements
+
+- Python 3.10-3.11
+- PyTorch >= 2.0.0
+- OpenMMLab 2.0:
+  - mmcv >= 2.0.0
+  - mmdet >= 3.0.0
+  - mmpose >= 1.0.0
+
 ## Installation
+
+### Using pip (recommended)
 
 ```bash
 pip install openmim
-mim install mmcv-full
-mim install mmdet
-mim install mmpose
+mim install mmengine mmcv mmdet mmpose
 
 pip install anime-face-detector
 ```
 
-This package is tested only on Ubuntu.
+### Using uv
+
+```bash
+pip install openmim
+mim install mmengine mmcv mmdet mmpose
+
+uv pip install anime-face-detector
+```
+
+### From source
+
+```bash
+git clone https://github.com/hysts/anime-face-detector
+cd anime-face-detector
+
+pip install openmim
+mim install mmengine mmcv mmdet mmpose
+pip install -e .
+```
+
+Tested on Ubuntu and Windows with CUDA 12.1.
 
 ## Usage
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/hysts/anime-face-detector/blob/main/demo.ipynb)
