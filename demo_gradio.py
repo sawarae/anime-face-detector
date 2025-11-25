@@ -13,7 +13,7 @@ import anime_face_detector
 
 def detect(img, face_score_threshold: float, landmark_score_threshold: float,
            detector: anime_face_detector.LandmarkDetector) -> PIL.Image.Image:
-    image = cv2.imread(img.name)
+    image = cv2.imread(img)
     preds = detector(image)
 
     res = image.copy()
@@ -79,20 +79,23 @@ def main():
     gr.Interface(
         func,
         [
-            gr.inputs.Image(type='file', label='Input'),
-            gr.inputs.Slider(0,
-                             1,
-                             step=args.score_slider_step,
-                             default=args.face_score_threshold,
-                             label='Face Score Threshold'),
-            gr.inputs.Slider(0,
-                             1,
-                             step=args.score_slider_step,
-                             default=args.landmark_score_threshold,
-                             label='Landmark Score Threshold'),
+            gr.Image(type='filepath', label='Input'),
+            gr.Slider(
+                0,
+                1,
+                step=args.score_slider_step,
+                value=args.face_score_threshold,
+                label='Face Score Threshold',
+            ),
+            gr.Slider(
+                0,
+                1,
+                step=args.score_slider_step,
+                value=args.landmark_score_threshold,
+                label='Landmark Score Threshold',
+            ),
         ],
-        gr.outputs.Image(type='pil', label='Output'),
-        server_port=args.port,
+        gr.Image(type='pil', label='Output'),
         title=title,
         description=description,
         article=article,
@@ -103,9 +106,8 @@ def main():
                 args.landmark_score_threshold,
             ],
         ],
-        enable_queue=True,
         live=args.live,
-    ).launch(debug=args.debug, share=args.share)
+    ).launch(debug=args.debug, share=args.share, server_port=args.port)
 
 
 if __name__ == '__main__':
