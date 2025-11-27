@@ -30,12 +30,15 @@ RUN pip uninstall -y xtcocotools && \
     pip install --no-cache-dir --no-binary :all: xtcocotools
 
 # Copy project files
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md demo_gradio.py ./
 COPY anime_face_detector ./anime_face_detector/
 
 # Install the package (without OpenMMLab deps, already installed)
 RUN pip install --no-cache-dir -e . --no-deps && \
     pip install --no-cache-dir opencv-python-headless
+
+# Install Gradio for web demo
+RUN pip install --no-cache-dir gradio
 
 # Set default command
 CMD ["python", "-c", "from anime_face_detector import create_detector; print('Import successful')"]
