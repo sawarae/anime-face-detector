@@ -107,7 +107,12 @@ def main():
             ],
         ],
         live=args.live,
-    ).launch(debug=args.debug, share=args.share, server_port=args.port)
+    ).launch(
+        debug=args.debug,
+        share=args.share,
+        server_port=args.port,
+        server_name='0.0.0.0',
+    )
 
 
 if __name__ == '__main__':
