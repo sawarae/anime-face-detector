@@ -12,6 +12,13 @@ from mmdet.apis import inference_detector, init_detector
 from mmpose.apis import inference_top_down_pose_model, init_pose_model
 from mmpose.datasets import DatasetInfo
 
+from .onnx_helper import (
+    ONNXFaceDetector,
+    ONNXLandmarkDetector,
+    get_onnx_model_path,
+    is_onnx_available,
+)
+
 
 class LandmarkDetector:
     def __init__(
@@ -25,19 +32,67 @@ class LandmarkDetector:
                 str, pathlib.Path]] = None,
             device: str = 'cuda:0',
             flip_test: bool = True,
-            box_scale_factor: float = 1.1):
-        landmark_config = self._load_config(landmark_detector_config_or_path)
-        self.dataset_info = DatasetInfo(
-            landmark_config.dataset_info)  # type: ignore
-        face_detector_config = self._load_config(face_detector_config_or_path)
-
-        self.landmark_detector = self._init_pose_model(
-            landmark_config, landmark_detector_checkpoint_path, device,
-            flip_test)
-        self.face_detector = self._init_face_detector(
-            face_detector_config, face_detector_checkpoint_path, device)
-
+            box_scale_factor: float = 1.1,
+            use_onnx: bool = False,
+            face_detector_name: Optional[str] = None,
+            landmark_detector_name: Optional[str] = None):
+        self.use_onnx = use_onnx and is_onnx_available()
+        self.device = device
         self.box_scale_factor = box_scale_factor
+
+        if self.use_onnx:
+            # Try to use ONNX models if available
+            self._init_onnx_models(face_detector_name, landmark_detector_name)
+        else:
+            # Use PyTorch models
+            landmark_config = self._load_config(landmark_detector_config_or_path)
+            self.dataset_info = DatasetInfo(
+                landmark_config.dataset_info)  # type: ignore
+            face_detector_config = self._load_config(face_detector_config_or_path)
+
+            self.landmark_detector = self._init_pose_model(
+                landmark_config, landmark_detector_checkpoint_path, device,
+                flip_test)
+            self.face_detector = self._init_face_detector(
+                face_detector_config, face_detector_checkpoint_path, device)
+
+    def _init_onnx_models(self, face_detector_name: Optional[str],
+                         landmark_detector_name: Optional[str]):
+        """Initialize ONNX models if available."""
+        self.onnx_face_detector = None
+        self.onnx_landmark_detector = None
+
+        if face_detector_name:
+            face_onnx_path = get_onnx_model_path(face_detector_name)
+            if face_onnx_path.exists():
+                try:
+                    self.onnx_face_detector = ONNXFaceDetector(
+                        face_onnx_path, device=self.device)
+                    print(f"Using ONNX face detector: {face_onnx_path}")
+                except Exception as e:
+                    warnings.warn(f"Failed to load ONNX face detector: {e}. "
+                                f"Falling back to PyTorch.")
+                    self.use_onnx = False
+            else:
+                warnings.warn(f"ONNX model not found at {face_onnx_path}. "
+                            f"Please convert the model first using tools/convert_to_onnx.py")
+                self.use_onnx = False
+
+        if landmark_detector_name:
+            landmark_onnx_path = get_onnx_model_path(landmark_detector_name)
+            if landmark_onnx_path.exists():
+                try:
+                    self.onnx_landmark_detector = ONNXLandmarkDetector(
+                        landmark_onnx_path, device=self.device)
+                    print(f"Using ONNX landmark detector: {landmark_onnx_path}")
+                except Exception as e:
+                    warnings.warn(f"Failed to load ONNX landmark detector: {e}. "
+                                f"Falling back to PyTorch.")
+                    self.use_onnx = False
+            else:
+                warnings.warn(f"ONNX model not found at {landmark_onnx_path}. "
+                            f"Please convert the model first using tools/convert_to_onnx.py")
+                self.use_onnx = False
 
     @staticmethod
     def _load_config(
@@ -73,7 +128,12 @@ class LandmarkDetector:
     def _detect_faces(self, image: np.ndarray) -> list[np.ndarray]:
         # predicted boxes using mmdet model have the format of
         # [x0, y0, x1, y1, score]
-        boxes = inference_detector(self.face_detector, image)[0]
+        if self.use_onnx and self.onnx_face_detector is not None:
+            # Use ONNX face detector
+            boxes = self.onnx_face_detector(image)
+        else:
+            # Use PyTorch face detector
+            boxes = inference_detector(self.face_detector, image)[0]
         # scale boxes by `self.box_scale_factor`
         boxes = self._update_pred_box(boxes)
         return boxes
@@ -94,13 +154,19 @@ class LandmarkDetector:
     def _detect_landmarks(
             self, image: np.ndarray,
             boxes: list[dict[str, np.ndarray]]) -> list[dict[str, np.ndarray]]:
-        preds, _ = inference_top_down_pose_model(
-            self.landmark_detector,
-            image,
-            boxes,
-            format='xyxy',
-            dataset_info=self.dataset_info,
-            return_heatmap=False)
+        if self.use_onnx and self.onnx_landmark_detector is not None:
+            # Use ONNX landmark detector
+            bboxes = [box['bbox'] for box in boxes]
+            preds = self.onnx_landmark_detector(image, bboxes)
+        else:
+            # Use PyTorch landmark detector
+            preds, _ = inference_top_down_pose_model(
+                self.landmark_detector,
+                image,
+                boxes,
+                format='xyxy',
+                dataset_info=self.dataset_info,
+                return_heatmap=False)
         return preds
 
     @staticmethod
