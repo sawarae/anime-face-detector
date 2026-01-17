@@ -57,6 +57,11 @@ class LandmarkDetector:
         self.device = device
         self.box_scale_factor = box_scale_factor
 
+        # Initialize attributes (will be set based on mode)
+        self.face_detector = None
+        self.landmark_detector = None
+        self.dataset_info = None
+
         if self.use_onnx:
             # Try to use ONNX models if available
             self._init_onnx_models(face_detector_name, landmark_detector_name)
