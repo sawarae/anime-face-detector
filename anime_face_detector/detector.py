@@ -84,6 +84,7 @@ class LandmarkDetector:
         """Initialize ONNX models if available."""
         self.onnx_face_detector = None
         self.onnx_landmark_detector = None
+        onnx_models_found = True
 
         if face_detector_name:
             face_onnx_path = get_onnx_model_path(face_detector_name)
@@ -95,11 +96,11 @@ class LandmarkDetector:
                 except Exception as e:
                     warnings.warn(f"Failed to load ONNX face detector: {e}. "
                                 f"Falling back to PyTorch.")
-                    self.use_onnx = False
+                    onnx_models_found = False
             else:
                 warnings.warn(f"ONNX model not found at {face_onnx_path}. "
                             f"Please convert the model first using tools/convert_to_onnx.py")
-                self.use_onnx = False
+                onnx_models_found = False
 
         if landmark_detector_name:
             landmark_onnx_path = get_onnx_model_path(landmark_detector_name)
@@ -111,11 +112,21 @@ class LandmarkDetector:
                 except Exception as e:
                     warnings.warn(f"Failed to load ONNX landmark detector: {e}. "
                                 f"Falling back to PyTorch.")
-                    self.use_onnx = False
+                    onnx_models_found = False
             else:
                 warnings.warn(f"ONNX model not found at {landmark_onnx_path}. "
                             f"Please convert the model first using tools/convert_to_onnx.py")
-                self.use_onnx = False
+                onnx_models_found = False
+
+        if not onnx_models_found:
+            self.use_onnx = False
+            if not PYTORCH_AVAILABLE:
+                raise RuntimeError(
+                    "Neither ONNX models nor PyTorch dependencies are available. "
+                    "Please either:\n"
+                    "  1. Convert models to ONNX format using tools/convert_to_onnx.py, or\n"
+                    "  2. Install PyTorch dependencies: pip install mmcv-full mmdet mmpose torch torchvision"
+                )
 
     @staticmethod
     def _load_config(
