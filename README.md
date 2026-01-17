@@ -39,6 +39,8 @@ This package is tested only on Ubuntu.
 ## Usage
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/hysts/anime-face-detector/blob/main/demo.ipynb)
 
+### Basic Usage (PyTorch)
+
 ```python
 import cv2
 
@@ -49,6 +51,42 @@ image = cv2.imread('assets/input.jpg')
 preds = detector(image)
 print(preds[0])
 ```
+
+### ONNX Acceleration (Faster Inference)
+
+For faster inference, you can use ONNX Runtime. First, install the additional dependencies:
+
+```bash
+pip install onnx onnxruntime-gpu  # For GPU
+# or
+pip install onnx onnxruntime  # For CPU
+```
+
+Then convert your models to ONNX format:
+
+```bash
+# Convert face detector
+python tools/convert_to_onnx.py --model yolov3
+
+# Convert landmark detector
+python tools/convert_to_onnx.py --model hrnetv2
+```
+
+Use ONNX models for faster inference:
+
+```python
+import cv2
+
+from anime_face_detector import create_detector
+
+# Enable ONNX acceleration
+detector = create_detector('yolov3', use_onnx=True)
+image = cv2.imread('assets/input.jpg')
+preds = detector(image)
+print(preds[0])
+```
+
+**Note**: ONNX models provide significant speedup (typically 2-3x faster) especially on CPU and for batch processing.
 
 ```
 {'bbox': array([2.2450244e+03, 1.5940223e+03, 2.4116030e+03, 1.7458063e+03,

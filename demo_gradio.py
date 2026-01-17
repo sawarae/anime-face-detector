@@ -52,6 +52,9 @@ def main():
                         type=str,
                         default='cuda:0',
                         choices=['cuda:0', 'cpu'])
+    parser.add_argument('--use-onnx',
+                        action='store_true',
+                        help='Use ONNX models for faster inference')
     parser.add_argument('--face-score-threshold', type=float, default=0.5)
     parser.add_argument('--landmark-score-threshold', type=float, default=0.3)
     parser.add_argument('--score-slider-step', type=float, default=0.05)
@@ -68,7 +71,8 @@ def main():
             sample_path.as_posix())
 
     detector = anime_face_detector.create_detector(args.detector,
-                                                   device=args.device)
+                                                   device=args.device,
+                                                   use_onnx=args.use_onnx)
     func = functools.partial(detect, detector=detector)
     func = functools.update_wrapper(func, detect)
 

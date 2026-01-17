@@ -37,7 +37,21 @@ def create_detector(face_detector_name: str = 'yolov3',
                     landmark_model_name='hrnetv2',
                     device: str = 'cuda:0',
                     flip_test: bool = True,
-                    box_scale_factor: float = 1.1) -> LandmarkDetector:
+                    box_scale_factor: float = 1.1,
+                    use_onnx: bool = False) -> LandmarkDetector:
+    """Create a landmark detector with optional ONNX acceleration.
+
+    Args:
+        face_detector_name: Face detector model ('yolov3' or 'faster-rcnn')
+        landmark_model_name: Landmark model ('hrnetv2')
+        device: Device to run on ('cuda:0' or 'cpu')
+        flip_test: Whether to use flip test for landmark detection
+        box_scale_factor: Scale factor for bounding boxes
+        use_onnx: Whether to use ONNX models for faster inference
+
+    Returns:
+        LandmarkDetector instance
+    """
     assert face_detector_name in ['yolov3', 'faster-rcnn']
     assert landmark_model_name in ['hrnetv2']
     detector_config_path = get_config_path(face_detector_name)
@@ -50,5 +64,8 @@ def create_detector(face_detector_name: str = 'yolov3',
                              detector_checkpoint_path,
                              device=device,
                              flip_test=flip_test,
-                             box_scale_factor=box_scale_factor)
+                             box_scale_factor=box_scale_factor,
+                             use_onnx=use_onnx,
+                             face_detector_name=face_detector_name,
+                             landmark_detector_name=landmark_model_name)
     return model
