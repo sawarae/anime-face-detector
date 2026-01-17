@@ -5,12 +5,20 @@ import warnings
 from typing import Optional, Union
 
 import cv2
-import mmcv
 import numpy as np
-import torch.nn as nn
-from mmdet.apis import inference_detector, init_detector
-from mmpose.apis import inference_top_down_pose_model, init_pose_model
-from mmpose.datasets import DatasetInfo
+
+# Try to import PyTorch dependencies (optional for ONNX-only mode)
+try:
+    import mmcv
+    import torch.nn as nn
+    from mmdet.apis import inference_detector, init_detector
+    from mmpose.apis import inference_top_down_pose_model, init_pose_model
+    from mmpose.datasets import DatasetInfo
+    PYTORCH_AVAILABLE = True
+except ImportError:
+    PYTORCH_AVAILABLE = False
+    mmcv = None
+    nn = None
 
 from .onnx_helper import (
     ONNXFaceDetector,
@@ -36,6 +44,15 @@ class LandmarkDetector:
             use_onnx: bool = False,
             face_detector_name: Optional[str] = None,
             landmark_detector_name: Optional[str] = None):
+        # Force ONNX mode if PyTorch is not available
+        if not PYTORCH_AVAILABLE:
+            if not use_onnx:
+                warnings.warn(
+                    "PyTorch dependencies (mmdet, mmpose) are not installed. "
+                    "Automatically enabling ONNX mode. Install PyTorch dependencies "
+                    "if you want to use PyTorch models.")
+            use_onnx = True
+
         self.use_onnx = use_onnx and is_onnx_available()
         self.device = device
         self.box_scale_factor = box_scale_factor
@@ -45,6 +62,12 @@ class LandmarkDetector:
             self._init_onnx_models(face_detector_name, landmark_detector_name)
         else:
             # Use PyTorch models
+            if not PYTORCH_AVAILABLE:
+                raise ImportError(
+                    "PyTorch dependencies are not installed. Please install them with:\n"
+                    "pip install mmcv-full mmdet mmpose torch torchvision\n"
+                    "Or use ONNX mode by setting use_onnx=True")
+
             landmark_config = self._load_config(landmark_detector_config_or_path)
             self.dataset_info = DatasetInfo(
                 landmark_config.dataset_info)  # type: ignore
@@ -96,16 +119,19 @@ class LandmarkDetector:
 
     @staticmethod
     def _load_config(
-        config_or_path: Optional[Union[mmcv.Config, str, pathlib.Path]]
-    ) -> Optional[mmcv.Config]:
-        if config_or_path is None or isinstance(config_or_path, mmcv.Config):
+        config_or_path: Optional[Union[str, pathlib.Path]]
+    ) -> Optional:
+        if not PYTORCH_AVAILABLE:
+            return None
+        if config_or_path is None or (mmcv and isinstance(config_or_path, mmcv.Config)):
             return config_or_path
         return mmcv.Config.fromfile(config_or_path)
 
     @staticmethod
-    def _init_pose_model(config: mmcv.Config,
-                         checkpoint_path: Union[str, pathlib.Path],
-                         device: str, flip_test: bool) -> nn.Module:
+    def _init_pose_model(config, checkpoint_path: Union[str, pathlib.Path],
+                         device: str, flip_test: bool):
+        if not PYTORCH_AVAILABLE:
+            raise ImportError("PyTorch dependencies not available")
         if isinstance(checkpoint_path, pathlib.Path):
             checkpoint_path = checkpoint_path.as_posix()
         model = init_pose_model(config, checkpoint_path, device=device)
@@ -113,10 +139,11 @@ class LandmarkDetector:
         return model
 
     @staticmethod
-    def _init_face_detector(config: Optional[mmcv.Config],
-                            checkpoint_path: Optional[Union[str,
-                                                            pathlib.Path]],
-                            device: str) -> Optional[nn.Module]:
+    def _init_face_detector(config: Optional,
+                            checkpoint_path: Optional[Union[str, pathlib.Path]],
+                            device: str) -> Optional:
+        if not PYTORCH_AVAILABLE:
+            raise ImportError("PyTorch dependencies not available")
         if config is not None:
             if isinstance(checkpoint_path, pathlib.Path):
                 checkpoint_path = checkpoint_path.as_posix()

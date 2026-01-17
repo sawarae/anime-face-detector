@@ -239,7 +239,16 @@ class ONNXLandmarkDetector:
 
 def get_onnx_model_path(model_name: str) -> pathlib.Path:
     """Get ONNX model path, similar to get_checkpoint_path."""
-    import torch
+    import os
+
+    # Try to use torch.hub if available, otherwise use XDG cache
+    try:
+        import torch
+        cache_dir = pathlib.Path(torch.hub.get_dir()) / 'checkpoints'
+    except ImportError:
+        cache_home = os.environ.get('XDG_CACHE_HOME',
+                                    os.path.join(os.path.expanduser('~'), '.cache'))
+        cache_dir = pathlib.Path(cache_home) / 'anime_face_detector' / 'checkpoints'
 
     assert model_name in ['faster-rcnn', 'yolov3', 'hrnetv2']
     if model_name in ['faster-rcnn', 'yolov3']:
@@ -247,9 +256,8 @@ def get_onnx_model_path(model_name: str) -> pathlib.Path:
     else:
         file_name = f'mmpose_anime-face_{model_name}.onnx'
 
-    model_dir = pathlib.Path(torch.hub.get_dir()) / 'checkpoints'
-    model_dir.mkdir(exist_ok=True, parents=True)
-    model_path = model_dir / file_name
+    cache_dir.mkdir(exist_ok=True, parents=True)
+    model_path = cache_dir / file_name
 
     return model_path
 
