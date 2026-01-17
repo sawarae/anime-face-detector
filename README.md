@@ -27,44 +27,43 @@ The mean images of real images belonging to each cluster:
 ## Requirements
 
 - Python 3.10-3.11
-- PyTorch >= 2.0.0
+- PyTorch == 2.9.1
 - OpenMMLab 2.0:
-  - mmcv >= 2.0.0
-  - mmdet >= 3.0.0
-  - mmpose >= 1.0.0
+  - mmengine == 0.10.7
+  - mmcv == 2.1.0
+  - mmdet == 3.2.0
+  - mmpose == 1.3.2
 
 ## Installation
 
-### Using pip (recommended)
+### Using uv (linux)
 
 ```bash
-pip install openmim
-mim install mmengine mmcv mmdet mmpose
+sudo apt-get install -y ninja-build
+uv sync
 
-pip install anime-face-detector
+mkdir -p deps && cd deps
+git clone https://github.com/jin-s13/xtcocoapi.git
+cd xtcocoapi && ../../.venv/bin/python -m pip install -e . && cd ../..
+
+# nvcc --versionでcudaのバージョンを確認して適合するtorchをインストールする
+# https://pytorch.org/get-started/previous-versions/
+uv pip install torch==2.9.1+cu121 torchvision --index-url https://download.pytorch.org/whl/cu121
+
+uv pip install openmim mmengine
+uv cache clean mmcv --force
+
+# For other GPU architectures, adjust TORCH_CUDA_ARCH_LIST:
+# - Blackwell (RTX 50XX): "12.0"
+# - Hopper (H100): "9.0"
+# - Ada Lovelace (RTX 40xx): "8.9"
+# - Ampere (RTX 30xx, A100): "8.0,8.6"
+# - Turing (RTX 20xx): "7.5"
+# - Volta (V100): "7.0"
+MMCV_WITH_OPS=1 FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST="12.0" pip install mmcv==2.1.0 --no-cache-dir --no-build-isolation
+uv pip install --no-cache-dir mmdet==3.2.0 mmpose==1.3.2
+uv pip install --no-cache-dir gradio  # option
 ```
-
-### Using uv
-
-```bash
-pip install openmim
-mim install mmengine mmcv mmdet mmpose
-
-uv pip install anime-face-detector
-```
-
-### From source
-
-```bash
-git clone https://github.com/hysts/anime-face-detector
-cd anime-face-detector
-
-pip install openmim
-mim install mmengine mmcv mmdet mmpose
-pip install -e .
-```
-
-Tested on Ubuntu and Windows with CUDA 12.1.
 
 ## Docker (GPU)
 
@@ -99,8 +98,6 @@ docker build -t anime-face-detector:gpu .
 ```
 
 **Note:** Building from source takes 30-60 minutes because mmcv needs to be compiled with CUDA ops.
-
-**Supported GPU architectures:** Volta (7.0), Turing (7.5), Ampere (8.0, 8.6), Ada Lovelace (8.9), Hopper (9.0)
 
 ## Usage
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/hysts/anime-face-detector/blob/main/demo.ipynb)

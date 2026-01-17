@@ -9,8 +9,6 @@ requires-python = ">=3.10,<3.12"
 dependencies = [
     "numpy>=1.21.3,<2.0",
     "opencv-python-headless>=4.5.4.58",
-    "torch>=2.7.0",
-    "torchvision>=0.18.0",
 ]
 
 [project.urls]
