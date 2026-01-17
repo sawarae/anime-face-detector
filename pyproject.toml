@@ -30,9 +30,6 @@ openmmlab = [
 [tool.uv.extra-build-dependencies]
 chumpy = ["wheel", "pip", "setuptools"]
 
-[tool.hatch.build.targets.wheel]
-packages = ["anime_face_detector"]
-
 [dependency-groups]
 dev = [
     "pre-commit>=3.0.0",
