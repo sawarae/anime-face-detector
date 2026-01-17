@@ -1,5 +1,5 @@
 # Use PyTorch devel image with CUDA support (includes compiler for mmcv build)
-FROM pytorch/pytorch:2.4.0-cuda12.1-cudnn9-devel
+FROM pytorch/pytorch:2.7.0-cuda12.8-cudnn9-devel
 
 WORKDIR /app
 
@@ -14,12 +14,10 @@ RUN apt-get update && apt-get install -y \
 # Install mmengine first
 RUN pip install --no-cache-dir openmim mmengine
 
-# Build mmcv from source with CUDA ops
-# FORCE_CUDA=1 is required because Docker build doesn't have GPU access
-# TORCH_CUDA_ARCH_LIST specifies target GPU architectures
+# Build mmcv from source with CUDA ops for sm_120 (RTX 5090)
 RUN git clone --depth 1 --branch v2.1.0 https://github.com/open-mmlab/mmcv.git /tmp/mmcv && \
     cd /tmp/mmcv && \
-    MMCV_WITH_OPS=1 FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0" pip install -e . && \
+    MMCV_WITH_OPS=1 FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST="12.0" pip install -e . && \
     rm -rf /tmp/mmcv/.git
 
 # Install mmdet and mmpose
