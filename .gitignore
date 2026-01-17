@@ -80,7 +80,7 @@ profile_default/
 ipython_config.py
 
 # pyenv
-.python-version
+# .python-version  # Commented out for UV - commit this file for team consistency
 
 # pipenv
 Pipfile.lock
@@ -103,6 +103,10 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# UV package manager
+.python-version.bak
+uv.lock  # Note: You may want to commit this for reproducibility
 
 # Spyder project settings
 .spyderproject
