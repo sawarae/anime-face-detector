@@ -5,12 +5,27 @@ import warnings
 from typing import Optional, Union
 
 import cv2
-import mmcv
 import numpy as np
-import torch.nn as nn
-from mmdet.apis import inference_detector, init_detector
-from mmpose.apis import inference_top_down_pose_model, init_pose_model
-from mmpose.datasets import DatasetInfo
+
+# Try to import PyTorch dependencies (optional for ONNX-only mode)
+try:
+    import mmcv
+    import torch.nn as nn
+    from mmdet.apis import inference_detector, init_detector
+    from mmpose.apis import inference_top_down_pose_model, init_pose_model
+    from mmpose.datasets import DatasetInfo
+    PYTORCH_AVAILABLE = True
+except ImportError:
+    PYTORCH_AVAILABLE = False
+    mmcv = None
+    nn = None
+
+from .onnx_helper import (
+    ONNXFaceDetector,
+    ONNXLandmarkDetector,
+    get_onnx_model_path,
+    is_onnx_available,
+)
 
 
 class LandmarkDetector:
@@ -25,32 +40,114 @@ class LandmarkDetector:
                 str, pathlib.Path]] = None,
             device: str = 'cuda:0',
             flip_test: bool = True,
-            box_scale_factor: float = 1.1):
-        landmark_config = self._load_config(landmark_detector_config_or_path)
-        self.dataset_info = DatasetInfo(
-            landmark_config.dataset_info)  # type: ignore
-        face_detector_config = self._load_config(face_detector_config_or_path)
+            box_scale_factor: float = 1.1,
+            use_onnx: bool = False,
+            face_detector_name: Optional[str] = None,
+            landmark_detector_name: Optional[str] = None):
+        # Force ONNX mode if PyTorch is not available
+        if not PYTORCH_AVAILABLE:
+            if not use_onnx:
+                warnings.warn(
+                    "PyTorch dependencies (mmdet, mmpose) are not installed. "
+                    "Automatically enabling ONNX mode. Install PyTorch dependencies "
+                    "if you want to use PyTorch models.")
+            use_onnx = True
 
-        self.landmark_detector = self._init_pose_model(
-            landmark_config, landmark_detector_checkpoint_path, device,
-            flip_test)
-        self.face_detector = self._init_face_detector(
-            face_detector_config, face_detector_checkpoint_path, device)
-
+        self.use_onnx = use_onnx and is_onnx_available()
+        self.device = device
         self.box_scale_factor = box_scale_factor
+
+        # Initialize attributes (will be set based on mode)
+        self.face_detector = None
+        self.landmark_detector = None
+        self.dataset_info = None
+
+        if self.use_onnx:
+            # Try to use ONNX models if available
+            self._init_onnx_models(face_detector_name, landmark_detector_name)
+        else:
+            # Use PyTorch models
+            if not PYTORCH_AVAILABLE:
+                raise ImportError(
+                    "PyTorch dependencies are not installed. Please install them with:\n"
+                    "pip install mmcv-full mmdet mmpose torch torchvision\n"
+                    "Or use ONNX mode by setting use_onnx=True")
+
+            landmark_config = self._load_config(landmark_detector_config_or_path)
+            self.dataset_info = DatasetInfo(
+                landmark_config.dataset_info)  # type: ignore
+            face_detector_config = self._load_config(face_detector_config_or_path)
+
+            self.landmark_detector = self._init_pose_model(
+                landmark_config, landmark_detector_checkpoint_path, device,
+                flip_test)
+            self.face_detector = self._init_face_detector(
+                face_detector_config, face_detector_checkpoint_path, device)
+
+    def _init_onnx_models(self, face_detector_name: Optional[str],
+                         landmark_detector_name: Optional[str]):
+        """Initialize ONNX models if available."""
+        self.onnx_face_detector = None
+        self.onnx_landmark_detector = None
+        onnx_models_found = True
+
+        if face_detector_name:
+            face_onnx_path = get_onnx_model_path(face_detector_name)
+            if face_onnx_path.exists():
+                try:
+                    self.onnx_face_detector = ONNXFaceDetector(
+                        face_onnx_path, device=self.device)
+                    print(f"Using ONNX face detector: {face_onnx_path}")
+                except Exception as e:
+                    warnings.warn(f"Failed to load ONNX face detector: {e}. "
+                                f"Falling back to PyTorch.")
+                    onnx_models_found = False
+            else:
+                warnings.warn(f"ONNX model not found at {face_onnx_path}. "
+                            f"Please convert the model first using tools/convert_to_onnx.py")
+                onnx_models_found = False
+
+        if landmark_detector_name:
+            landmark_onnx_path = get_onnx_model_path(landmark_detector_name)
+            if landmark_onnx_path.exists():
+                try:
+                    self.onnx_landmark_detector = ONNXLandmarkDetector(
+                        landmark_onnx_path, device=self.device)
+                    print(f"Using ONNX landmark detector: {landmark_onnx_path}")
+                except Exception as e:
+                    warnings.warn(f"Failed to load ONNX landmark detector: {e}. "
+                                f"Falling back to PyTorch.")
+                    onnx_models_found = False
+            else:
+                warnings.warn(f"ONNX model not found at {landmark_onnx_path}. "
+                            f"Please convert the model first using tools/convert_to_onnx.py")
+                onnx_models_found = False
+
+        if not onnx_models_found:
+            self.use_onnx = False
+            if not PYTORCH_AVAILABLE:
+                raise RuntimeError(
+                    "Neither ONNX models nor PyTorch dependencies are available. "
+                    "Please either:\n"
+                    "  1. Convert models to ONNX format using tools/convert_to_onnx.py, or\n"
+                    "  2. Install PyTorch dependencies: pip install mmcv-full mmdet mmpose torch torchvision"
+                )
 
     @staticmethod
     def _load_config(
-        config_or_path: Optional[Union[mmcv.Config, str, pathlib.Path]]
-    ) -> Optional[mmcv.Config]:
-        if config_or_path is None or isinstance(config_or_path, mmcv.Config):
+        config_or_path: Optional[Union[str, pathlib.Path]]
+    ) -> Optional:
+        if not PYTORCH_AVAILABLE:
+            return None
+        if config_or_path is None or (mmcv and isinstance(config_or_path, mmcv.Config)):
             return config_or_path
         return mmcv.Config.fromfile(config_or_path)
 
     @staticmethod
-    def _init_pose_model(config: mmcv.Config,
-                         checkpoint_path: Union[str, pathlib.Path],
-                         device: str, flip_test: bool) -> nn.Module:
+    def _init_pose_model(config, checkpoint_path: Union[str, pathlib.Path],
+                         device: str, flip_test: bool):
+        if not PYTORCH_AVAILABLE:
+            raise ImportError("PyTorch dependencies not available")
         if isinstance(checkpoint_path, pathlib.Path):
             checkpoint_path = checkpoint_path.as_posix()
         model = init_pose_model(config, checkpoint_path, device=device)
@@ -58,10 +155,11 @@ class LandmarkDetector:
         return model
 
     @staticmethod
-    def _init_face_detector(config: Optional[mmcv.Config],
-                            checkpoint_path: Optional[Union[str,
-                                                            pathlib.Path]],
-                            device: str) -> Optional[nn.Module]:
+    def _init_face_detector(config: Optional,
+                            checkpoint_path: Optional[Union[str, pathlib.Path]],
+                            device: str) -> Optional:
+        if not PYTORCH_AVAILABLE:
+            raise ImportError("PyTorch dependencies not available")
         if config is not None:
             if isinstance(checkpoint_path, pathlib.Path):
                 checkpoint_path = checkpoint_path.as_posix()
@@ -73,7 +171,12 @@ class LandmarkDetector:
     def _detect_faces(self, image: np.ndarray) -> list[np.ndarray]:
         # predicted boxes using mmdet model have the format of
         # [x0, y0, x1, y1, score]
-        boxes = inference_detector(self.face_detector, image)[0]
+        if self.use_onnx and self.onnx_face_detector is not None:
+            # Use ONNX face detector
+            boxes = self.onnx_face_detector(image)
+        else:
+            # Use PyTorch face detector
+            boxes = inference_detector(self.face_detector, image)[0]
         # scale boxes by `self.box_scale_factor`
         boxes = self._update_pred_box(boxes)
         return boxes
@@ -94,13 +197,19 @@ class LandmarkDetector:
     def _detect_landmarks(
             self, image: np.ndarray,
             boxes: list[dict[str, np.ndarray]]) -> list[dict[str, np.ndarray]]:
-        preds, _ = inference_top_down_pose_model(
-            self.landmark_detector,
-            image,
-            boxes,
-            format='xyxy',
-            dataset_info=self.dataset_info,
-            return_heatmap=False)
+        if self.use_onnx and self.onnx_landmark_detector is not None:
+            # Use ONNX landmark detector
+            bboxes = [box['bbox'] for box in boxes]
+            preds = self.onnx_landmark_detector(image, bboxes)
+        else:
+            # Use PyTorch landmark detector
+            preds, _ = inference_top_down_pose_model(
+                self.landmark_detector,
+                image,
+                boxes,
+                format='xyxy',
+                dataset_info=self.dataset_info,
+                return_heatmap=False)
         return preds
 
     @staticmethod
