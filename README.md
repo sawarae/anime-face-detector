@@ -40,18 +40,19 @@ The mean images of real images belonging to each cluster:
 
 ```bash
 sudo apt-get install -y ninja-build
-uv sync
+uv venv .venv && uv sync
+uv pip install wheel
 
 mkdir -p deps && cd deps
 git clone https://github.com/jin-s13/xtcocoapi.git
 cd xtcocoapi && ../../.venv/bin/python -m pip install -e . && cd ../..
 
-# nvcc --versionでcudaのバージョンを確認して適合するtorchをインストールする
+# check cuda version by "nvcc --version"
 # https://pytorch.org/get-started/previous-versions/
-uv pip install torch==2.9.1+cu121 torchvision --index-url https://download.pytorch.org/whl/cu121
+uv pip install torch==2.9.1+cu128 torchvision --index-url https://download.pytorch.org/whl/cu128
 
 uv pip install openmim mmengine
-uv cache clean mmcv --force
+# uv cache clean mmcv --force
 
 # For other GPU architectures, adjust TORCH_CUDA_ARCH_LIST:
 # - Blackwell (RTX 50XX): "12.0"
