@@ -1,31 +1,31 @@
-import pathlib
-
-from setuptools import find_packages, setup
-
-
-def _get_long_description():
-    path = pathlib.Path(__file__).parent / 'README.md'
-    with open(path, encoding='utf-8') as f:
-        long_description = f.read()
-    return long_description
-
-
-def _get_requirements(path):
-    with open(path) as f:
-        data = f.readlines()
-    return data
-
+from setuptools import setup, find_packages
 
 setup(
     name='anime-face-detector',
-    version='0.0.9',
-    author='hysts',
-    url='https://github.com/hysts/anime-face-detector',
-    python_requires='>=3.7',
-    install_requires=_get_requirements('requirements.txt'),
-    packages=find_packages(exclude=('tests', )),
-    include_package_data=True,
+    version='0.1.1',
     description='Anime Face Detector using mmdet and mmpose',
-    long_description=_get_long_description(),
-    long_description_content_type='text/markdown',
+    readme='README.md',
+    license='MIT',
+    author='hysts',
+    python_requires='>=3.10,<3.12',
+    packages=find_packages(),
+    include_package_data=True,
+    install_requires=[
+        'numpy>=1.21.3,<2.0',
+        'opencv-python-headless>=4.5.4.58',
+        'torch==2.9.1',
+        'torchvision',
+    ],
+    extras_require={
+        'demo': [
+            'gradio>=4.0.0',
+        ],
+        'openmmlab': [
+            'mmengine==0.10.7',
+            'mmcv==2.1.0',
+            'mmdet==3.2.0',
+            'mmpose==1.3.2',
+        ],
+    },
+    url='https://github.com/hysts/anime-face-detector',
 )

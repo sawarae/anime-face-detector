@@ -2,9 +2,10 @@
 [![PyPI version](https://badge.fury.io/py/anime-face-detector.svg)](https://pypi.org/project/anime-face-detector/)
 [![Downloads](https://pepy.tech/badge/anime-face-detector)](https://pepy.tech/project/anime-face-detector)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/hysts/anime-face-detector/blob/main/demo.ipynb)
-[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-orange)](https://huggingface.co/spaces/hysts/anime-face-detector)
+[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-orange)](https://huggingface.co/spaces/ayousanz/anime-face-detector-gpu)
 [![MIT License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
 [![GitHub stars](https://img.shields.io/github/stars/hysts/anime-face-detector.svg?style=flat-square&logo=github&label=Stars&logoColor=white)](https://github.com/hysts/anime-face-detector)
+[![Docker Image](https://img.shields.io/badge/Docker-ghcr.io-blue?logo=docker)](https://ghcr.io/ayutaz/anime-face-detector)
 
 This is an anime face detector using
 [mmdetection](https://github.com/open-mmlab/mmdetection)
@@ -23,18 +24,80 @@ The result of k-means clustering of landmarks detected in real images:
 The mean images of real images belonging to each cluster:
 ![](https://raw.githubusercontent.com/hysts/anime-face-detector/main/assets/cluster_mean.jpg)
 
+## Requirements
+
+- Python 3.10-3.11
+- PyTorch == 2.9.1
+- OpenMMLab 2.0:
+  - mmengine == 0.10.7
+  - mmcv == 2.1.0
+  - mmdet == 3.2.0
+  - mmpose == 1.3.2
+
 ## Installation
 
-```bash
-pip install openmim
-mim install mmcv-full
-mim install mmdet
-mim install mmpose
+### Using uv (linux)
 
-pip install anime-face-detector
+```bash
+sudo apt-get install -y ninja-build
+uv sync
+
+mkdir -p deps && cd deps
+git clone https://github.com/jin-s13/xtcocoapi.git
+cd xtcocoapi && ../../.venv/bin/python -m pip install -e . && cd ../..
+
+# nvcc --versionでcudaのバージョンを確認して適合するtorchをインストールする
+# https://pytorch.org/get-started/previous-versions/
+uv pip install torch==2.9.1+cu121 torchvision --index-url https://download.pytorch.org/whl/cu121
+
+uv pip install openmim mmengine
+uv cache clean mmcv --force
+
+# For other GPU architectures, adjust TORCH_CUDA_ARCH_LIST:
+# - Blackwell (RTX 50XX): "12.0"
+# - Hopper (H100): "9.0"
+# - Ada Lovelace (RTX 40xx): "8.9"
+# - Ampere (RTX 30xx, A100): "8.0,8.6"
+# - Turing (RTX 20xx): "7.5"
+# - Volta (V100): "7.0"
+MMCV_WITH_OPS=1 FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST="12.0" pip install mmcv==2.1.0 --no-cache-dir --no-build-isolation
+uv pip install --no-cache-dir mmdet==3.2.0 mmpose==1.3.2
+uv pip install --no-cache-dir gradio  # option
 ```
 
-This package is tested only on Ubuntu.
+## Docker (GPU)
+
+Pre-built Docker image with CUDA support is available on GitHub Container Registry.
+
+### Pull and run
+
+```bash
+# Pull the pre-built image
+docker pull ghcr.io/ayutaz/anime-face-detector:gpu-cuda12.1
+
+# Run with GPU support
+docker run --gpus all -v /path/to/your/images:/data ghcr.io/ayutaz/anime-face-detector:gpu-cuda12.1 python -c "
+from anime_face_detector import create_detector
+import cv2
+
+detector = create_detector('yolov3', device='cuda:0')
+image = cv2.imread('/data/your_image.jpg')
+preds = detector(image)
+print(f'Detected {len(preds)} faces')
+"
+```
+
+### Build from source
+
+If you need to build the Docker image yourself:
+
+```bash
+git clone https://github.com/ayutaz/anime-face-detector
+cd anime-face-detector
+docker build -t anime-face-detector:gpu .
+```
+
+**Note:** Building from source takes 30-60 minutes because mmcv needs to be compiled with CUDA ops.
 
 ## Usage
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/hysts/anime-face-detector/blob/main/demo.ipynb)
@@ -89,7 +152,7 @@ print(preds[0])
 (They will be automatically downloaded when you use them.)
 
 ## Demo (using [Gradio](https://github.com/gradio-app/gradio))
-[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-orange)](https://huggingface.co/spaces/hysts/anime-face-detector)
+[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-orange)](https://huggingface.co/spaces/ayousanz/anime-face-detector-gpu)
 
 ### Run locally
 ```bash
