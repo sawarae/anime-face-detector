@@ -38,6 +38,32 @@ def test_yolo_hrnetv2():
         cv2.imwrite(f'tests/assets/detected_face_{i}.png', cropped_img)
         print(f"  検出領域を保存: tests/assets/detected_face_{i}.png")
     
+    # キーポイントを描画した画像を出力
+    print("\n--- キーポイントを描画 ---")
+    result_img = img.copy()
+    for i, pred in enumerate(preds):
+        # bbox矩形を描画
+        box = pred['bbox']
+        x1, y1, x2, y2 = np.round(box[:4]).astype(int)
+        cv2.rectangle(result_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        
+        # キーポイントを描画
+        keypoints = pred['keypoints']  # (K, 3) shape: [x, y, score]
+        for pt in keypoints:
+            x, y, score = pt
+            x, y = int(x), int(y)
+            # スコアに応じて色を変更
+            if score > 0.5:
+                color = (0, 255, 0)  # 緑: 高信頼度
+            elif score > 0.3:
+                color = (0, 165, 255)  # オレンジ: 中信頼度
+            else:
+                color = (0, 0, 255)  # 赤: 低信頼度
+            cv2.circle(result_img, (x, y), 3, color, -1)
+    
+    cv2.imwrite('tests/assets/yolo_landmarks_output.png', result_img)
+    print(f"キーポイント描画画像を保存: tests/assets/yolo_landmarks_output.png")
+    
     # 結果が得られたことを確認
     assert len(preds) > 0, "顔検出に失敗しました"
     print("\n=== テスト成功 ===")

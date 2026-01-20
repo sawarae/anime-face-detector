@@ -8,7 +8,9 @@ def test_hrnetv2_only():
     print("=== HRNetV2単独テスト ===")
     
     # 画像を読み込む
-    img = cv2.imread('tests/assets/image.png')
+    # img = cv2.imread('tests/assets/image.png')
+    img = cv2.imread('tests/assets/image2.png')
+
     assert img is not None, "画像の読み込みに失敗しました"
     print(f"画像形状: {img.shape}")
     
@@ -56,6 +58,26 @@ def test_hrnetv2_only():
         print(f"キーポイント数: {len(keypoints)}")
         print(f"キーポイント形状: {keypoints.shape}")
         print(f"最初のキーポイント: {keypoints[0]}")
+    
+    # キーポイントを描画した画像を出力
+    print("\n--- キーポイントを描画 ---")
+    result_img = img.copy()
+    for i, pred in enumerate(preds):
+        keypoints = pred['keypoints']  # (K, 3) shape: [x, y, score]
+        for pt in keypoints:
+            x, y, score = pt
+            x, y = int(x), int(y)
+            # スコアに応じて色を変更
+            if score > 0.5:
+                color = (0, 255, 0)  # 緑: 高信頼度
+            elif score > 0.3:
+                color = (0, 165, 255)  # オレンジ: 中信頼度
+            else:
+                color = (0, 0, 255)  # 赤: 低信頼度
+            cv2.circle(result_img, (x, y), 3, color, -1)
+    
+    cv2.imwrite('tests/assets/landmarks_output.png', result_img)
+    print(f"キーポイント描画画像を保存: tests/assets/landmarks_output.png")
 
     # 結果が得られたことを確認
     assert len(preds) > 0, "ランドマーク推定に失敗しました"
