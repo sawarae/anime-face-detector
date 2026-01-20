@@ -1,4 +1,5 @@
 deps
+tests/assets
 
 # Python
 __pycache__/
