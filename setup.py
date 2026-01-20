@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='anime-face-detector',
-    version='0.1.1',
+    version='0.1.2',
     description='Anime Face Detector using mmdet and mmpose',
     readme='README.md',
     license='MIT',
