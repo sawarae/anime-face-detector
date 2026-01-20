@@ -102,6 +102,8 @@ docker build -t anime-face-detector:gpu .
 ## Usage
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/hysts/anime-face-detector/blob/main/demo.ipynb)
 
+### Basic Usage with Pre-trained Models
+
 ```python
 import cv2
 
@@ -112,6 +114,78 @@ image = cv2.imread('assets/input.jpg')
 preds = detector(image)
 print(preds[0])
 ```
+
+### Using Custom YOLOv8 Models (MMDetection)
+
+You can use your own trained YOLOv8 models for anime face detection:
+
+```python
+import pathlib
+import cv2
+
+from anime_face_detector import create_detector
+
+# Create detector with custom YOLOv8 model
+detector = create_detector(
+    face_detector_name='yolov8',
+    custom_detector_config_path=pathlib.Path('path/to/your/yolov8_config.py'),
+    custom_detector_checkpoint_path=pathlib.Path('path/to/your/yolov8_weights.pth'),
+    device='cuda:0'
+)
+
+image = cv2.imread('your_image.jpg')
+preds = detector(image)
+```
+
+You can also use custom configurations or checkpoints with the existing YOLOv3 or Faster-RCNN models:
+
+```python
+detector = create_detector(
+    face_detector_name='yolov3',
+    custom_detector_checkpoint_path=pathlib.Path('path/to/custom/yolov3_weights.pth')
+)
+```
+
+### Using ADetailer Models (Ultralytics)
+
+You can use [ADetailer](https://github.com/Bing-su/adetailer) models which are based on Ultralytics YOLOv8:
+
+```bash
+# Install ultralytics
+pip install ultralytics
+# or with uv
+uv pip install ultralytics
+```
+
+```python
+import pathlib
+import cv2
+
+from anime_face_detector import create_detector
+
+# Download model from Hugging Face
+from huggingface_hub import hf_hub_download
+model_path = hf_hub_download("Bingsu/adetailer", "face_yolov8n.pt")
+
+# Create detector with adetailer model (auto-detects .pt extension)
+detector = create_detector(
+    custom_detector_checkpoint_path=pathlib.Path(model_path)
+)
+
+# Or explicitly specify the framework
+detector = create_detector(
+    custom_detector_checkpoint_path=pathlib.Path(model_path),
+    detector_framework='ultralytics'
+)
+
+image = cv2.imread('your_image.jpg')
+preds = detector(image)
+```
+
+Available adetailer models:
+- `face_yolov8n.pt` - Nano model (fastest)
+- `face_yolov8s.pt` - Small model
+- `face_yolov8m.pt` - Medium model (more accurate)
 
 ```
 {'bbox': array([2.2450244e+03, 1.5940223e+03, 2.4116030e+03, 1.7458063e+03,

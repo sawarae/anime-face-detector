@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pathlib
 import warnings
+from typing import Literal
 
 import cv2
 import numpy as np
@@ -10,6 +11,13 @@ from mmdet.apis import inference_detector, init_detector
 from mmengine.config import Config
 from mmengine.registry import DefaultScope
 from mmpose.apis import inference_topdown, init_model
+
+try:
+    from ultralytics import YOLO
+
+    ULTRALYTICS_AVAILABLE = True
+except ImportError:
+    ULTRALYTICS_AVAILABLE = False
 
 
 class LandmarkDetector:
@@ -22,6 +30,7 @@ class LandmarkDetector:
         device: str = 'cuda:0',
         flip_test: bool = True,
         box_scale_factor: float = 1.1,
+        face_detector_framework: Literal['mmdet', 'ultralytics'] = 'mmdet',
     ):
         landmark_config = self._load_config(landmark_detector_config_or_path)
         face_detector_config = self._load_config(face_detector_config_or_path)
@@ -29,11 +38,19 @@ class LandmarkDetector:
         self.landmark_detector = self._init_pose_model(
             landmark_config, landmark_detector_checkpoint_path, device, flip_test
         )
-        self.face_detector = self._init_face_detector(
-            face_detector_config, face_detector_checkpoint_path, device
-        )
+
+        self.face_detector_framework = face_detector_framework
+        if face_detector_framework == 'ultralytics':
+            self.face_detector = self._init_ultralytics_detector(
+                face_detector_checkpoint_path, device
+            )
+        else:
+            self.face_detector = self._init_face_detector(
+                face_detector_config, face_detector_checkpoint_path, device
+            )
 
         self.box_scale_factor = box_scale_factor
+        self.device = device
 
     @staticmethod
     def _load_config(
@@ -93,22 +110,96 @@ class LandmarkDetector:
             model = None
         return model
 
+    @staticmethod
+    def _init_ultralytics_detector(
+        checkpoint_path: str | pathlib.Path | None, device: str
+    ) -> object | None:
+        """Initialize Ultralytics YOLO detector (for adetailer models).
+
+        Args:
+            checkpoint_path: Path to .pt model file (e.g., face_yolov8n.pt)
+            device: Device to run on ('cuda:0' or 'cpu')
+
+        Returns:
+            YOLO model instance or None
+        """
+        if checkpoint_path is None:
+            return None
+
+        if not ULTRALYTICS_AVAILABLE:
+            raise ImportError(
+                'Ultralytics is not installed. Install it with: pip install ultralytics'
+            )
+
+        if isinstance(checkpoint_path, pathlib.Path):
+            checkpoint_path = checkpoint_path.as_posix()
+
+        # Load YOLO model
+        model = YOLO(checkpoint_path)
+
+        # Set device
+        if device.startswith('cuda'):
+            model.to('cuda')
+        else:
+            model.to('cpu')
+
+        return model
+
     def _detect_faces(self, image: np.ndarray) -> list[np.ndarray]:
-        # Set mmdet scope for face detection
-        with DefaultScope.overwrite_default_scope('mmdet'):
-            # mmdet 3.x returns DetDataSample
-            result = inference_detector(self.face_detector, image)
-        # Extract bboxes and scores from pred_instances
-        pred_instances = result.pred_instances
-        bboxes = pred_instances.bboxes.cpu().numpy()
-        scores = pred_instances.scores.cpu().numpy()
-        # Combine to [x0, y0, x1, y1, score] format
-        boxes = []
-        for bbox, score in zip(bboxes, scores):
-            box = np.append(bbox, score)
-            boxes.append(box)
-        # scale boxes by `self.box_scale_factor`
+        """Detect faces using either MMDetection or Ultralytics framework.
+
+        Args:
+            image: Input image in BGR format (OpenCV format)
+
+        Returns:
+            List of bounding boxes with format [x0, y0, x1, y1, score]
+        """
+        if self.face_detector_framework == 'ultralytics':
+            boxes = self._detect_faces_ultralytics(image)
+        else:
+            # Set mmdet scope for face detection
+            with DefaultScope.overwrite_default_scope('mmdet'):
+                # mmdet 3.x returns DetDataSample
+                result = inference_detector(self.face_detector, image)
+            # Extract bboxes and scores from pred_instances
+            pred_instances = result.pred_instances
+            bboxes = pred_instances.bboxes.cpu().numpy()
+            scores = pred_instances.scores.cpu().numpy()
+            # Combine to [x0, y0, x1, y1, score] format
+            boxes = []
+            for bbox, score in zip(bboxes, scores):
+                box = np.append(bbox, score)
+                boxes.append(box)
+
+        # Scale boxes by `self.box_scale_factor`
         boxes = self._update_pred_box(boxes)
+        return boxes
+
+    def _detect_faces_ultralytics(self, image: np.ndarray) -> list[np.ndarray]:
+        """Detect faces using Ultralytics YOLO model.
+
+        Args:
+            image: Input image in BGR format (OpenCV format)
+
+        Returns:
+            List of bounding boxes with format [x0, y0, x1, y1, score]
+        """
+        # Run inference
+        results = self.face_detector(image, verbose=False)
+
+        # Extract bounding boxes
+        boxes = []
+        if len(results) > 0 and results[0].boxes is not None:
+            boxes_data = results[0].boxes
+            # boxes_data.xyxy: tensor of shape (N, 4) with [x0, y0, x1, y1]
+            # boxes_data.conf: tensor of shape (N,) with confidence scores
+            for i in range(len(boxes_data)):
+                xyxy = boxes_data.xyxy[i].cpu().numpy()  # [x0, y0, x1, y1]
+                conf = boxes_data.conf[i].cpu().numpy()  # confidence score
+                # Combine to [x0, y0, x1, y1, score]
+                box = np.append(xyxy, conf)
+                boxes.append(box)
+
         return boxes
 
     def _update_pred_box(self, pred_boxes: np.ndarray) -> list[np.ndarray]:
