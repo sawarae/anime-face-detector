@@ -49,10 +49,6 @@ def create_detect_fn(detector: anime_face_detector.LandmarkDetector):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--detector',
-                        type=str,
-                        default='yolov3',
-                        choices=['yolov3', 'faster-rcnn'])
     parser.add_argument('--device',
                         type=str,
                         default='cuda:0',
@@ -72,8 +68,8 @@ def main():
             'https://raw.githubusercontent.com/hysts/anime-face-detector/main/assets/input.jpg',
             sample_path.as_posix())
 
-    detector = anime_face_detector.create_detector(args.detector,
-                                                   device=args.device)
+    # Use default YOLOv8 detector (auto-downloads face_yolov8n.pt)
+    detector = anime_face_detector.create_detector(device=args.device)
     detect_fn = create_detect_fn(detector)
 
     title = 'hysts/anime-face-detector'
