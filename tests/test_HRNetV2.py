@@ -8,8 +8,7 @@ def test_hrnetv2_only():
     print("=== HRNetV2単独テスト ===")
     
     # 画像を読み込む
-    # img = cv2.imread('tests/assets/image.png')
-    img = cv2.imread('tests/assets/image2.png')
+    img = cv2.imread('tests/assets/image.png')
 
     assert img is not None, "画像の読み込みに失敗しました"
     print(f"画像形状: {img.shape}")

@@ -1,8 +1,10 @@
 import cv2
 import numpy as np
+import pathlib
 import anime_face_detector
 
 def test_yolo_hrnetv2():
+    CUSTOM_MODEL = "YOUR_CUSTOM_MODEL.pt"
     print("=== YOLOv8とHRNetV2の統合テスト ===")
     
     # 画像を読み込む
@@ -11,12 +13,27 @@ def test_yolo_hrnetv2():
     print(f"画像形状: {img.shape}")
     
     # create_detectorでYOLOv8とHRNetV2を統合したモデルを作成
+    # カスタムYOLOv8モデル (models/FacesV1.pt) を使用
     print("\n--- Detectorを初期化 ---")
-    detector = anime_face_detector.create_detector(
-        face_detector_name='yolov8',
-        landmark_model_name='hrnetv2',
-        device='cpu'
-    )
+    custom_model_path = pathlib.Path(f'models/{CUSTOM_MODEL}')
+    
+    if custom_model_path.exists():
+        print(f"カスタムモデルを使用: {custom_model_path}")
+        detector = anime_face_detector.create_detector(
+            face_detector_name='yolov8',
+            landmark_model_name='hrnetv2',
+            device='cpu',
+            custom_detector_checkpoint_path=custom_model_path,
+            detector_framework='ultralytics'
+        )
+    else:
+        print(f"カスタムモデルが見つかりません: {custom_model_path}")
+        print("デフォルトのYOLOv8モデルを使用します")
+        detector = anime_face_detector.create_detector(
+            face_detector_name='yolov8',
+            landmark_model_name='hrnetv2',
+            device='cpu'
+        )
     print("Detector初期化完了")
     
     # 顔検出とランドマーク推定を実行
