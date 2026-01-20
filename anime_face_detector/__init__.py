@@ -4,6 +4,13 @@ import torch
 
 from .detector import LandmarkDetector
 
+try:
+    from huggingface_hub import hf_hub_download
+
+    HF_HUB_AVAILABLE = True
+except ImportError:
+    HF_HUB_AVAILABLE = False
+
 
 def get_config_path(model_name: str) -> pathlib.Path:
     assert model_name in ['faster-rcnn', 'yolov3', 'yolov8', 'hrnetv2']
@@ -39,7 +46,7 @@ def get_checkpoint_path(model_name: str) -> pathlib.Path:
 
 
 def create_detector(
-    face_detector_name: str = 'yolov3',
+    face_detector_name: str = 'yolov8',
     landmark_model_name: str = 'hrnetv2',
     device: str = 'cuda:0',
     flip_test: bool = True,
@@ -84,6 +91,22 @@ def create_detector(
     """
     assert face_detector_name in ['yolov3', 'faster-rcnn', 'yolov8', None]
     assert landmark_model_name in ['hrnetv2']
+
+    # Auto-download face_yolov8n.pt if yolov8 is selected as default
+    if (
+        face_detector_name == 'yolov8'
+        and custom_detector_checkpoint_path is None
+        and detector_framework is None
+    ):
+        if not HF_HUB_AVAILABLE:
+            raise ImportError(
+                "huggingface_hub is required for default YOLOv8 model. "
+                "Install it with: pip install huggingface-hub ultralytics"
+            )
+        # Download face_yolov8n from Hugging Face
+        model_path = hf_hub_download('Bingsu/adetailer', 'face_yolov8n.pt')
+        custom_detector_checkpoint_path = pathlib.Path(model_path)
+        detector_framework = 'ultralytics'
 
     # Auto-detect framework from checkpoint file extension if not specified
     if detector_framework is None and custom_detector_checkpoint_path is not None:
