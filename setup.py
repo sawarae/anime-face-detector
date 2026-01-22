@@ -20,7 +20,7 @@ setup(
     ],
     extras_require={
         'demo': [
-            'gradio>=4.0.0',
+            'gradio>=5.0.0',
         ],
     },
     url='https://github.com/hysts/anime-face-detector',

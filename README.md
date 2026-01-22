@@ -171,11 +171,16 @@ Models are automatically downloaded on first use:
 
 ### Run locally
 ```bash
-pip install gradio
+pip install "gradio>=5.0.0"
 git clone https://github.com/hysts/anime-face-detector
 cd anime-face-detector
 
 python demo_gradio.py
+```
+
+**Note:** For Gradio version compatibility, use Gradio 5.x or later. If you have an older version:
+```bash
+pip install --upgrade "gradio>=5.0.0"
 ```
 
 ## Migration from Original Version

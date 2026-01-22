@@ -19,7 +19,7 @@ dependencies = [
 Homepage = "https://github.com/hysts/anime-face-detector"
 
 [project.optional-dependencies]
-demo = ["gradio>=4.0.0"]
+demo = ["gradio>=5.0.0"]
 
 [tool.uv.extra-build-dependencies]
 chumpy = ["wheel", "pip", "setuptools"]

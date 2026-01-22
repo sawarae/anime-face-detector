@@ -46,6 +46,11 @@ python test_new_implementation.py
 
 ### Gradioデモ
 ```bash
+# Gradioをインストール（Gradio 5.x以上が必要）
+pip install "gradio>=5.0.0"
+# または uv を使用
+uv pip install "gradio>=5.0.0"
+
 # CUDAが利用可能な場合は自動的にGPUを使用、それ以外はCPUを使用
 python demo_gradio.py
 
