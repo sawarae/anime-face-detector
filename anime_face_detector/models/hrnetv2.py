@@ -505,12 +505,29 @@ class HRNetV2(nn.Module):
         if 'state_dict' in state_dict:
             state_dict = state_dict['state_dict']
 
-        # Remove 'module.' prefix if present
+        # Remove 'module.' prefix and map keys
         new_state_dict = {}
         for k, v in state_dict.items():
             # Remove 'module.' prefix if present
             if k.startswith('module.'):
                 k = k[7:]
+
+            # Map keypoint_head to head
+            if k.startswith('keypoint_head.final_layer.'):
+                # keypoint_head.final_layer.0 -> head.conv_layers.0
+                # keypoint_head.final_layer.1 -> head.conv_layers.1
+                # keypoint_head.final_layer.3 -> head.final_layer
+                parts = k.split('.')
+                layer_idx = parts[2]  # '0', '1', '3'
+                suffix = '.'.join(parts[3:])  # 'weight', 'bias', etc.
+
+                if layer_idx == '3':
+                    new_k = f'head.final_layer.{suffix}'
+                else:
+                    new_k = f'head.conv_layers.{layer_idx}.{suffix}'
+
+                new_state_dict[new_k] = v
+                continue
 
             new_state_dict[k] = v
 
@@ -519,9 +536,12 @@ class HRNetV2(nn.Module):
 
         # Debug output (can be removed in production)
         if missing_keys:
-            print(f'Warning: Missing keys in checkpoint: {missing_keys[:5]}...')  # Show first 5
+            # Filter out mean/std buffers which are initialized in __init__
+            real_missing = [k for k in missing_keys if k not in ['mean', 'std']]
+            if real_missing:
+                print(f'Warning: Missing keys in checkpoint: {real_missing[:5]}...')
         if unexpected_keys:
-            print(f'Warning: Unexpected keys in checkpoint: {unexpected_keys[:5]}...')  # Show first 5
+            print(f'Warning: Unexpected keys in checkpoint: {unexpected_keys[:5]}...')
 
     def preprocess(self, x):
         """Preprocess input image.
