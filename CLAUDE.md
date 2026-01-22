@@ -44,6 +44,16 @@ pre-commit run --all-files
 python test_new_implementation.py
 ```
 
+### Gradioデモ
+```bash
+# CUDAが利用可能な場合は自動的にGPUを使用、それ以外はCPUを使用
+python demo_gradio.py
+
+# 明示的にデバイスを指定する場合
+python demo_gradio.py --device cpu
+python demo_gradio.py --device cuda:0
+```
+
 ## アーキテクチャ
 
 ### 2段階検出パイプライン

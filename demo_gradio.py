@@ -49,9 +49,11 @@ def create_detect_fn(detector: anime_face_detector.LandmarkDetector):
 
 def main():
     parser = argparse.ArgumentParser()
+    # Auto-detect device: use CUDA if available, otherwise CPU
+    default_device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     parser.add_argument('--device',
                         type=str,
-                        default='cuda:0',
+                        default=default_device,
                         choices=['cuda:0', 'cpu'])
     parser.add_argument('--face-score-threshold', type=float, default=0.5)
     parser.add_argument('--landmark-score-threshold', type=float, default=0.3)
