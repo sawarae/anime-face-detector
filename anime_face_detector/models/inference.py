@@ -8,11 +8,11 @@ import torch
 
 
 def get_affine_transform(center, scale, rot, output_size, shift=(0.0, 0.0), inv=False):
-    """Get affine transformation matrix.
+    """Get affine transformation matrix compatible with mmpose.
 
     Args:
         center: Center point coordinates (x, y)
-        scale: Bounding box scale (width, height)
+        scale: Bounding box scale as [w, h] / 200.0
         rot: Rotation angle in degrees
         output_size: Output image size (width, height)
         shift: Shift offset (default: (0, 0))
@@ -22,24 +22,43 @@ def get_affine_transform(center, scale, rot, output_size, shift=(0.0, 0.0), inv=
         Affine transformation matrix (2x3)
     """
     if not isinstance(scale, np.ndarray) and not isinstance(scale, list):
-        scale = np.array([scale, scale])
+        scale = np.array([scale, scale], dtype=np.float32)
 
+    # Scale back to pixel units
     scale_tmp = scale * 200.0
+
+    # Use the width component for direction calculation
     src_w = scale_tmp[0]
     dst_w = output_size[0]
     dst_h = output_size[1]
 
+    # Calculate rotation
     rot_rad = np.pi * rot / 180
+
+    # Source direction vector
     src_dir = get_dir([0, src_w * -0.5], rot_rad)
+    # Destination direction vector
     dst_dir = np.array([0, dst_w * -0.5], dtype=np.float32)
 
+    # Define 3 points for affine transform
     src = np.zeros((3, 2), dtype=np.float32)
     dst = np.zeros((3, 2), dtype=np.float32)
-    src[0, :] = center + scale_tmp * shift
-    src[1, :] = center + src_dir + scale_tmp * shift
-    dst[0, :] = [dst_w * 0.5, dst_h * 0.5]
-    dst[1, :] = np.array([dst_w * 0.5, dst_h * 0.5]) + dst_dir
 
+    # Point 1: center
+    src[0, :] = center
+    if isinstance(shift, (tuple, list)):
+        shift = np.array(shift, dtype=np.float32)
+    src[0, :] += scale_tmp * shift
+
+    # Point 2: center + direction
+    src[1, :] = center + src_dir
+    src[1, :] += scale_tmp * shift
+
+    # Destination points
+    dst[0, :] = [dst_w * 0.5, dst_h * 0.5]
+    dst[1, :] = np.array([dst_w * 0.5, dst_h * 0.5], dtype=np.float32) + dst_dir
+
+    # Point 3: perpendicular to form triangle
     src[2:, :] = get_3rd_point(src[0, :], src[1, :])
     dst[2:, :] = get_3rd_point(dst[0, :], dst[1, :])
 
@@ -94,21 +113,23 @@ def box_to_center_scale(box, image_size, scale_factor=1.25):
 
     Returns:
         center: Center point (x, y)
-        scale: Scale (width, height)
+        scale: Scale as array [w, h] / 200.0
     """
     x0, y0, x1, y1 = box[:4]
     box_width = x1 - x0
     box_height = y1 - y0
-    center = np.array([(x0 + x1) / 2, (y0 + y1) / 2])
+    center = np.array([(x0 + x1) / 2, (y0 + y1) / 2], dtype=np.float32)
 
-    # Aspect ratio
-    aspect_ratio = image_size[0] / image_size[1]
+    # Aspect ratio matching (square crop for 256x256 input)
+    aspect_ratio = image_size[0] / image_size[1]  # typically 1.0 for 256x256
     if box_width > aspect_ratio * box_height:
         box_height = box_width / aspect_ratio
     elif box_width < aspect_ratio * box_height:
         box_width = box_height * aspect_ratio
 
-    scale = np.array([box_width / 200.0, box_height / 200.0]) * scale_factor
+    # Scale represents the bbox size relative to 200 pixels
+    # mmpose uses 200.0 as the base scale
+    scale = np.array([box_width, box_height], dtype=np.float32) / 200.0 * scale_factor
 
     return center, scale
 
@@ -129,7 +150,7 @@ def affine_transform_keypoints(keypoints, trans_matrix):
 
 
 def decode_heatmaps(heatmaps, input_size=(256, 256)):
-    """Decode heatmaps to keypoint coordinates using argmax.
+    """Decode heatmaps to keypoint coordinates using argmax with sub-pixel refinement.
 
     Args:
         heatmaps: Heatmap array, shape (K, H, W)
@@ -142,21 +163,55 @@ def decode_heatmaps(heatmaps, input_size=(256, 256)):
     K, H, W = heatmaps.shape
 
     # Flatten heatmaps
-    heatmaps_flat = heatmaps.reshape(K, -1)
+    heatmaps_reshaped = heatmaps.reshape(K, -1)
 
     # Get max values and indices
-    scores = np.max(heatmaps_flat, axis=1)
-    indices = np.argmax(heatmaps_flat, axis=1)
+    scores = np.max(heatmaps_reshaped, axis=1)
+    indices = np.argmax(heatmaps_reshaped, axis=1)
 
     # Convert indices to coordinates (in heatmap space)
     y = indices // W
     x = indices % W
 
-    # Scale to input size
+    # Refine coordinates with sub-pixel accuracy using Taylor expansion
+    keypoints = np.zeros((K, 2), dtype=np.float32)
+
+    for i in range(K):
+        px = int(x[i])
+        py = int(y[i])
+
+        if 1 < px < W - 1 and 1 < py < H - 1:
+            # Calculate derivatives for Taylor expansion
+            diff_x = (heatmaps[i, py, px + 1] - heatmaps[i, py, px - 1]) / 2.0
+            diff_y = (heatmaps[i, py + 1, px] - heatmaps[i, py - 1, px]) / 2.0
+            diff_xx = heatmaps[i, py, px + 1] - 2 * heatmaps[i, py, px] + heatmaps[i, py, px - 1]
+            diff_yy = heatmaps[i, py + 1, px] - 2 * heatmaps[i, py, px] + heatmaps[i, py - 1, px]
+            diff_xy = (heatmaps[i, py + 1, px + 1] - heatmaps[i, py + 1, px - 1] -
+                      heatmaps[i, py - 1, px + 1] + heatmaps[i, py - 1, px - 1]) / 4.0
+
+            # Calculate offset
+            derivative = np.array([diff_x, diff_y])
+            hessian = np.array([[diff_xx, diff_xy], [diff_xy, diff_yy]])
+
+            # Avoid division by zero
+            if diff_xx * diff_yy - diff_xy ** 2 != 0:
+                offset = -np.linalg.inv(hessian) @ derivative
+                # Limit offset to [-0.5, 0.5]
+                offset = np.clip(offset, -0.5, 0.5)
+                keypoints[i, 0] = px + offset[0]
+                keypoints[i, 1] = py + offset[1]
+            else:
+                keypoints[i, 0] = px
+                keypoints[i, 1] = py
+        else:
+            keypoints[i, 0] = px
+            keypoints[i, 1] = py
+
+    # Scale to input size (heatmap is typically 64x64, input is 256x256)
     scale_x = input_size[0] / W
     scale_y = input_size[1] / H
-
-    keypoints = np.stack([x * scale_x, y * scale_y], axis=1).astype(np.float32)
+    keypoints[:, 0] *= scale_x
+    keypoints[:, 1] *= scale_y
 
     return keypoints, scores
 
