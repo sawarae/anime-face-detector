@@ -400,14 +400,38 @@ class HRNetBackbone(nn.Module):
 
 
 class HeatmapHead(nn.Module):
-    """Heatmap head for keypoint detection."""
+    """Heatmap head for keypoint detection matching mmpose implementation."""
 
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, conv_out_channels=(270,), conv_kernel_sizes=(1,)):
         super().__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0)
+
+        # Build conv layers if specified
+        self.conv_layers = None
+        if conv_out_channels:
+            conv_layers = []
+            for i, (out_c, kernel_size) in enumerate(zip(conv_out_channels, conv_kernel_sizes)):
+                in_c = in_channels if i == 0 else conv_out_channels[i - 1]
+                padding = (kernel_size - 1) // 2
+                conv_layers.extend([
+                    nn.Conv2d(in_c, out_c, kernel_size=kernel_size, stride=1, padding=padding),
+                    nn.BatchNorm2d(out_c),
+                    nn.ReLU(inplace=True),
+                ])
+            self.conv_layers = nn.Sequential(*conv_layers)
+            final_in_channels = conv_out_channels[-1]
+        else:
+            final_in_channels = in_channels
+
+        # Final layer to produce heatmaps
+        self.final_layer = nn.Conv2d(
+            final_in_channels, out_channels, kernel_size=1, stride=1, padding=0
+        )
 
     def forward(self, x):
-        return self.conv(x)
+        if self.conv_layers is not None:
+            x = self.conv_layers(x)
+        x = self.final_layer(x)
+        return x
 
 
 class HRNetV2(nn.Module):
@@ -458,7 +482,13 @@ class HRNetV2(nn.Module):
         # Feature map processor (concat all branches)
         # Channels: 18 + 36 + 72 + 144 = 270
         self.num_keypoints = num_keypoints
-        self.head = HeatmapHead(in_channels=270, out_channels=num_keypoints)
+        # HeatmapHead matching mmpose config: conv_out_channels=(270,), conv_kernel_sizes=(1,)
+        self.head = HeatmapHead(
+            in_channels=270,
+            out_channels=num_keypoints,
+            conv_out_channels=(270,),
+            conv_kernel_sizes=(1,),
+        )
 
         # Data preprocessing parameters
         self.register_buffer('mean', torch.tensor([123.675, 116.28, 103.53]).view(1, 3, 1, 1))
@@ -478,12 +508,20 @@ class HRNetV2(nn.Module):
         # Remove 'module.' prefix if present
         new_state_dict = {}
         for k, v in state_dict.items():
+            # Remove 'module.' prefix if present
             if k.startswith('module.'):
                 k = k[7:]
+
             new_state_dict[k] = v
 
         # Load weights
-        self.load_state_dict(new_state_dict, strict=False)
+        missing_keys, unexpected_keys = self.load_state_dict(new_state_dict, strict=False)
+
+        # Debug output (can be removed in production)
+        if missing_keys:
+            print(f'Warning: Missing keys in checkpoint: {missing_keys[:5]}...')  # Show first 5
+        if unexpected_keys:
+            print(f'Warning: Unexpected keys in checkpoint: {unexpected_keys[:5]}...')  # Show first 5
 
     def preprocess(self, x):
         """Preprocess input image.
