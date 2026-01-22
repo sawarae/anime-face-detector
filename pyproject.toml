@@ -1,7 +1,7 @@
 [project]
 name = "anime-face-detector"
 version = "0.1.0"
-description = "Anime Face Detector using mmdet and mmpose"
+description = "Anime Face Detector using YOLOv8 and HRNetV2 (pure PyTorch)"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "hysts" }]
@@ -9,6 +9,8 @@ requires-python = ">=3.10,<3.12"
 dependencies = [
     "numpy>=1.21.3,<2.0",
     "opencv-python-headless>=4.5.4.58",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
     "huggingface-hub>=0.20.0",
     "ultralytics>=8.0.0",
 ]
@@ -18,16 +20,6 @@ Homepage = "https://github.com/hysts/anime-face-detector"
 
 [project.optional-dependencies]
 demo = ["gradio>=4.0.0"]
-# OpenMMLab dependencies - install via mim for pre-built wheels:
-# pip install openmim && mim install mmengine mmcv mmdet mmpose
-openmmlab = [
-    "mmengine>=0.7.0",
-    "mmcv>=2.1.0",  # check README for install
-    "mmdet>=3.2.0",
-    "mmpose>=1.3.2",
-]
-# Ultralytics YOLOv8 for adetailer models
-ultralytics = ["ultralytics>=8.0.0"]
 
 [tool.uv.extra-build-dependencies]
 chumpy = ["wheel", "pip", "setuptools"]
