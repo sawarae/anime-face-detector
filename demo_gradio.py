@@ -49,9 +49,11 @@ def create_detect_fn(detector: anime_face_detector.LandmarkDetector):
 
 def main():
     parser = argparse.ArgumentParser()
+    # Auto-detect device: use CUDA if available, otherwise CPU
+    default_device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     parser.add_argument('--device',
                         type=str,
-                        default='cuda:0',
+                        default=default_device,
                         choices=['cuda:0', 'cpu'])
     parser.add_argument('--face-score-threshold', type=float, default=0.5)
     parser.add_argument('--landmark-score-threshold', type=float, default=0.3)
@@ -76,38 +78,54 @@ def main():
     description = 'Demo for hysts/anime-face-detector. To use it, simply upload your image, or click one of the examples to load them. Read more at the links below.'
     article = "<a href='https://github.com/hysts/anime-face-detector'>GitHub Repo</a>"
 
-    gr.Interface(
-        detect_fn,
-        [
-            gr.Image(type='filepath', label='Input'),
-            gr.Slider(
-                0,
-                1,
-                step=args.score_slider_step,
-                value=args.face_score_threshold,
-                label='Face Score Threshold',
-            ),
-            gr.Slider(
-                0,
-                1,
-                step=args.score_slider_step,
-                value=args.landmark_score_threshold,
-                label='Landmark Score Threshold',
-            ),
-        ],
-        gr.Image(type='pil', label='Output'),
-        title=title,
-        description=description,
-        article=article,
-        examples=[
-            [
-                sample_path.as_posix(),
-                args.face_score_threshold,
-                args.landmark_score_threshold,
+    with gr.Blocks(title=title) as demo:
+        gr.Markdown(f'# {title}')
+        gr.Markdown(description)
+
+        with gr.Row():
+            with gr.Column():
+                input_image = gr.Image(type='filepath', label='Input')
+                face_score_slider = gr.Slider(
+                    0,
+                    1,
+                    step=args.score_slider_step,
+                    value=args.face_score_threshold,
+                    label='Face Score Threshold',
+                )
+                landmark_score_slider = gr.Slider(
+                    0,
+                    1,
+                    step=args.score_slider_step,
+                    value=args.landmark_score_threshold,
+                    label='Landmark Score Threshold',
+                )
+                submit_btn = gr.Button('Detect', variant='primary')
+
+            with gr.Column():
+                output_image = gr.Image(type='pil', label='Output')
+
+        gr.Examples(
+            examples=[
+                [
+                    sample_path.as_posix(),
+                    args.face_score_threshold,
+                    args.landmark_score_threshold,
+                ],
             ],
-        ],
-        live=args.live,
-    ).launch(
+            inputs=[input_image, face_score_slider, landmark_score_slider],
+            outputs=output_image,
+            fn=detect_fn,
+        )
+
+        submit_btn.click(
+            fn=detect_fn,
+            inputs=[input_image, face_score_slider, landmark_score_slider],
+            outputs=output_image,
+        )
+
+        gr.Markdown(article)
+
+    demo.launch(
         debug=args.debug,
         share=args.share,
         server_port=args.port,
