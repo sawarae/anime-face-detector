@@ -216,7 +216,7 @@ def decode_heatmaps(heatmaps, input_size=(256, 256)):
     return keypoints, scores
 
 
-def inference_single_image(model, image, box, device='cuda:0', input_size=(256, 256)):
+def inference_single_image(model, image, box, device='cuda:0', input_size=(256, 256), scale_factor=1.25):
     """Run inference on a single image with a single bounding box.
 
     Args:
@@ -225,6 +225,7 @@ def inference_single_image(model, image, box, device='cuda:0', input_size=(256, 
         box: Bounding box [x0, y0, x1, y1, score]
         device: Device to run inference on
         input_size: Model input size (width, height)
+        scale_factor: Scale factor for bounding box expansion (default: 1.25)
 
     Returns:
         keypoints: Keypoint coordinates in original image space, shape (K, 2)
@@ -234,7 +235,7 @@ def inference_single_image(model, image, box, device='cuda:0', input_size=(256, 
 
     # Get center and scale
     image_h, image_w = image.shape[:2]
-    center, scale = box_to_center_scale(box, input_size)
+    center, scale = box_to_center_scale(box, input_size, scale_factor)
 
     # Get affine transformation
     trans = get_affine_transform(center, scale, 0, input_size)
@@ -266,7 +267,7 @@ def inference_single_image(model, image, box, device='cuda:0', input_size=(256, 
     return keypoints, scores
 
 
-def inference_batch(model, image, boxes, device='cuda:0', input_size=(256, 256)):
+def inference_batch(model, image, boxes, device='cuda:0', input_size=(256, 256), scale_factor=1.25):
     """Run inference on a single image with multiple bounding boxes.
 
     Args:
@@ -275,6 +276,7 @@ def inference_batch(model, image, boxes, device='cuda:0', input_size=(256, 256))
         boxes: List of bounding boxes, each [x0, y0, x1, y1, score]
         device: Device to run inference on
         input_size: Model input size (width, height)
+        scale_factor: Scale factor for bounding box expansion (default: 1.25)
 
     Returns:
         results: List of detection results, each containing:
@@ -286,7 +288,7 @@ def inference_batch(model, image, boxes, device='cuda:0', input_size=(256, 256))
 
     results = []
     for box in boxes:
-        keypoints, scores = inference_single_image(model, image, box, device, input_size)
+        keypoints, scores = inference_single_image(model, image, box, device, input_size, scale_factor)
 
         # Combine keypoints and scores
         keypoints_with_scores = np.concatenate(

@@ -130,8 +130,7 @@ class LandmarkDetector:
                 box = np.append(xyxy, conf)
                 boxes.append(box)
 
-        # Scale boxes by `self.box_scale_factor`
-        boxes = self._update_pred_box(boxes)
+        # Note: box scaling is applied in inference_batch via scale_factor parameter
         return boxes
 
     def _update_pred_box(self, pred_boxes: list[np.ndarray]) -> list[np.ndarray]:
@@ -209,7 +208,12 @@ class LandmarkDetector:
 
         # Detect landmarks
         results = inference_batch(
-            self.landmark_detector, image, boxes, device=self.device, input_size=(256, 256)
+            self.landmark_detector,
+            image,
+            boxes,
+            device=self.device,
+            input_size=(256, 256),
+            scale_factor=self.box_scale_factor,
         )
 
         return results
