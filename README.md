@@ -29,19 +29,19 @@ The mean images of real images belonging to each cluster:
 
 ## Requirements
 
-- Python 3.10-3.11
-- PyTorch >= 2.0.0
-- torchvision >= 0.15.0
-- opencv-python-headless >= 4.5.4.58
-- ultralytics >= 8.0.0 (YOLOv8)
-- huggingface-hub >= 0.20.0
-- numpy >= 1.21.3, < 2.0
+- Python >=3.10,<3.12
+- torch==2.9.1
+- torchvision==0.24.1
+- opencv-python-headless>=4.5.4.58
+- ultralytics>=8.0.0
+- huggingface-hub>=0.20.0
+- numpy>=1.21.3,<2.0
 
 ## Installation
 
 ```bash
 # Install PyTorch (if not already installed)
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+pip install torch==2.9.1 torchvision==0.24.1
 
 # Install the package
 pip install ultralytics huggingface-hub opencv-python-headless numpy
@@ -56,6 +56,14 @@ Or install all dependencies at once:
 
 ```bash
 pip install -e .
+```
+
+### CUDA Environment (Optional)
+
+For CUDA environments, you can use `uv` with `pyproject.cuda.toml` to manage dependencies:
+
+```bash
+uv pip install -e . --extra-index-url https://download.pytorch.org/whl/cu128  # change cuda version
 ```
 
 ## Quick Start
