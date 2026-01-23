@@ -21,6 +21,11 @@ Homepage = "https://github.com/hysts/anime-face-detector"
 [project.optional-dependencies]
 demo = ["gradio>=5.0.0"]
 
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu128"
+
+
 [dependency-groups]
 dev = [
     "pre-commit>=3.0.0",
