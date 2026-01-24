@@ -174,6 +174,18 @@ Models are automatically downloaded on first use:
 - **YOLOv8**: [face_yolov8n.pt](https://huggingface.co/Bingsu/adetailer) from Hugging Face
 - **HRNetV2**: [mmpose_anime-face_hrnetv2.pth](https://github.com/hysts/anime-face-detector/releases/tag/v0.0.1) from GitHub Releases
 
+## Training Custom Models
+
+Want to detect landmarks on **animal characters** or other character types? Check out the **[training/](training/)** directory for tools to train your own HRNetV2 models!
+
+The training toolkit provides:
+- 🖼️ **Image crawler** for collecting training data from Safebooru, Danbooru, Gelbooru
+- ✏️ **Gradio-based annotation tool** for labeling 28 landmarks
+- 🚀 **Training scripts** for fine-tuning HRNetV2 on custom data
+- 📊 **Evaluation tools** with visualization
+
+See the [training README](training/README.md) and [quick start guide](training/QUICKSTART.md) for details.
+
 ## Demo (using [Gradio](https://github.com/gradio-app/gradio))
 [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-orange)](https://huggingface.co/spaces/ayousanz/anime-face-detector-gpu)
 

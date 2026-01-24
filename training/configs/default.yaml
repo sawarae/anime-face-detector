@@ -1,0 +1,47 @@
+# Default training configuration for HRNetV2
+
+# Dataset settings
+data:
+  image_dir: 'data/raw'
+  annotation_dir: 'data/annotated'
+  val_image_dir: null  # Optional, if different from train
+  val_annotation_dir: null  # Optional for separate validation set
+  input_size: [256, 256]  # [height, width]
+  heatmap_size: [64, 64]  # [height, width]
+  sigma: 2.0  # Gaussian sigma for heatmap generation
+
+# Model settings
+model:
+  num_keypoints: 28
+  pretrained_checkpoint: null  # Path to pretrained weights
+
+# Training settings
+training:
+  epochs: 100
+  batch_size: 8
+  num_workers: 4
+  device: 'cuda'  # 'cuda' or 'cpu'
+
+# Optimizer settings
+optimizer:
+  type: 'adam'  # 'adam' or 'sgd'
+  lr: 0.0001
+  weight_decay: 0.0
+
+# Scheduler settings
+scheduler:
+  type: 'plateau'  # 'plateau', 'step', or 'cosine'
+  factor: 0.5  # For ReduceLROnPlateau
+  patience: 5  # For ReduceLROnPlateau
+  step_size: 30  # For StepLR
+  gamma: 0.1  # For StepLR
+
+# Checkpoint settings
+checkpoint:
+  save_freq: 10  # Save every N epochs
+  output_dir: 'checkpoints'
+
+# Logging settings
+logging:
+  log_dir: 'checkpoints/runs'
+  print_freq: 10  # Print every N batches
