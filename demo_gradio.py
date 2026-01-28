@@ -7,7 +7,7 @@ import numpy as np
 import PIL.Image
 import torch
 
-import anime_face_detector
+from src import anime_face_detector
 
 
 def create_detect_fn(detector: anime_face_detector.LandmarkDetector):

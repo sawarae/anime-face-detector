@@ -105,7 +105,7 @@ python demo_gradio.py --device cuda:0
 ### 使用例
 
 ```python
-from anime_face_detector import create_detector
+from src.anime_face_detector import create_detector
 import cv2
 
 # デフォルトモデルを使用（自動ダウンロード）

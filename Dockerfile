@@ -29,7 +29,7 @@ RUN pip uninstall -y xtcocotools && \
 
 # Copy project files
 COPY pyproject.toml README.md demo_gradio.py ./
-COPY anime_face_detector ./anime_face_detector/
+COPY src/anime_face_detector ./anime_face_detector/
 
 # Install the package (without OpenMMLab deps, already installed)
 RUN pip install --no-cache-dir -e . --no-deps && \
