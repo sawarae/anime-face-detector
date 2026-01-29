@@ -71,6 +71,7 @@ executor = { type = "uv", no-project = true }
 verbosity = 0
 
 [tool.poe.tasks]
+download_image_png = "curl -L https://www.pngarc.com/wp-content/uploads/2024/02/34.34-min.png -o tests/assets/image.png"
 precommit = ["sync", "ty_check", "ruff_fix", "test"]
 ruff_fix = "ruff check --fix"
 sync = "uv sync"

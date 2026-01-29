@@ -27,5 +27,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
 
+      - name: Download tests/assets/image.png
+        run: uv run poe download_image_png
+
       - name: Run poe precommit
         run: uv run poe precommit
