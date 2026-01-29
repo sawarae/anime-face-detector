@@ -161,7 +161,9 @@ class LandmarkDetector:
         return boxes
 
     @staticmethod
-    def _load_image(image_or_path: np.ndarray | str | pathlib.Path) -> np.ndarray:
+    def _load_image(
+        image_or_path: np.ndarray | str | pathlib.Path,
+    ) -> np.ndarray:
         """Load image from path or return numpy array.
 
         Args:
@@ -178,6 +180,9 @@ class LandmarkDetector:
             image = cv2.imread(image_or_path.as_posix())
         else:
             raise ValueError('Invalid image type')
+
+        if image is None:
+            raise ValueError('Failed to load image')
         return image
 
     def __call__(
