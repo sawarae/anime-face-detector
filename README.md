@@ -60,7 +60,7 @@ pip install -e .
 
 ### CUDA Environment (Optional)
 
-For CUDA environments, you can use `uv` with `pyproject.cuda.toml` to manage dependencies:
+PyTorch CUDA wheels are distributed via the PyTorch package index. Choose the index URL that matches your CUDA runtime.
 
 ```bash
 uv pip install -e . --extra-index-url https://download.pytorch.org/whl/cu128  # change cuda version
@@ -71,7 +71,7 @@ uv pip install -e . --extra-index-url https://download.pytorch.org/whl/cu128  # 
 ### Basic Usage
 
 ```python
-from anime_face_detector import create_detector
+from src.anime_face_detector import create_detector
 import cv2
 
 # Create detector (models auto-download on first use)
@@ -85,11 +85,11 @@ results = detector(image)
 
 # Process results
 for result in results:
-    bbox = result['bbox']  # [x0, y0, x1, y1, score]
-    keypoints = result['keypoints']  # [[x, y, score], ...] (28 points)
+   bbox = result['bbox']  # [x0, y0, x1, y1, score]
+   keypoints = result['keypoints']  # [[x, y, score], ...] (28 points)
 
-    print(f'Face detected at: {bbox[:4]}')
-    print(f'Confidence: {bbox[4]:.3f}')
+   print(f'Face detected at: {bbox[:4]}')
+   print(f'Confidence: {bbox[4]:.3f}')
 ```
 
 ### Using Custom Models
@@ -201,11 +201,13 @@ This version removes all OpenMMLab dependencies (mmdetection, mmpose, mmcv) in f
 
 ```python
 # Old version (mmdetection/mmpose)
-from anime_face_detector import create_detector
+from src.anime_face_detector import create_detector
+
 detector = create_detector('yolov3', device='cuda:0')
 
 # New version (pure PyTorch)
-from anime_face_detector import create_detector
+from src.anime_face_detector import create_detector
+
 detector = create_detector(device='cuda:0')  # Uses YOLOv8 by default
 ```
 
