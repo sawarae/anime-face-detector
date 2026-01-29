@@ -1,7 +1,10 @@
+import pathlib
+
 import cv2
 import numpy as np
-import pathlib
+
 import anime_face_detector
+
 
 def test_yolo_hrnetv2():
     CUSTOM_MODEL = "YOUR_CUSTOM_MODEL.pt"
@@ -20,18 +23,13 @@ def test_yolo_hrnetv2():
     if custom_model_path.exists():
         print(f"カスタムモデルを使用: {custom_model_path}")
         detector = anime_face_detector.create_detector(
-            face_detector_name='yolov8',
-            landmark_model_name='hrnetv2',
+            face_detector_checkpoint_path=custom_model_path,
             device='cpu',
-            custom_detector_checkpoint_path=custom_model_path,
-            detector_framework='ultralytics'
         )
     else:
         print(f"カスタムモデルが見つかりません: {custom_model_path}")
         print("デフォルトのYOLOv8モデルを使用します")
         detector = anime_face_detector.create_detector(
-            face_detector_name='yolov8',
-            landmark_model_name='hrnetv2',
             device='cpu'
         )
     print("Detector初期化完了")
@@ -79,7 +77,7 @@ def test_yolo_hrnetv2():
             cv2.circle(result_img, (x, y), 3, color, -1)
     
     cv2.imwrite('tests/assets/yolo_landmarks_output.png', result_img)
-    print(f"キーポイント描画画像を保存: tests/assets/yolo_landmarks_output.png")
+    print("キーポイント描画画像を保存: tests/assets/yolo_landmarks_output.png")
     
     # 結果が得られたことを確認
     assert len(preds) > 0, "顔検出に失敗しました"

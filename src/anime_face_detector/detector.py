@@ -10,7 +10,6 @@ import warnings
 
 import cv2
 import numpy as np
-import torch
 
 try:
     from ultralytics import YOLO
