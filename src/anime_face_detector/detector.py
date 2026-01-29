@@ -43,10 +43,14 @@ class LandmarkDetector:
         self.box_scale_factor = box_scale_factor
 
         # Initialize HRNetV2 landmark detector
-        self.landmark_detector = self._init_hrnetv2(landmark_detector_checkpoint_path, device)
+        self.landmark_detector = self._init_hrnetv2(
+            landmark_detector_checkpoint_path, device
+        )
 
         # Initialize YOLOv8 face detector
-        self.face_detector = self._init_yolo_detector(face_detector_checkpoint_path, device)
+        self.face_detector = self._init_yolo_detector(
+            face_detector_checkpoint_path, device
+        )
 
     def _init_hrnetv2(
         self, checkpoint_path: str | pathlib.Path, device: str
@@ -113,6 +117,8 @@ class LandmarkDetector:
         Returns:
             List of bounding boxes with format [x0, y0, x1, y1, score]
         """
+        if self.face_detector is None:
+            raise ValueError('Face detector is not initialized.')
         # Run inference
         results = self.face_detector(image, verbose=False)
 

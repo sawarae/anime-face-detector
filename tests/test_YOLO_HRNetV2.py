@@ -56,7 +56,7 @@ def test_yolo_hrnetv2():
     # キーポイントを描画した画像を出力
     print("\n--- キーポイントを描画 ---")
     result_img = img.copy()
-    for i, pred in enumerate(preds):
+    for pred in preds:
         # bbox矩形を描画
         box = pred['bbox']
         x1, y1, x2, y2 = np.round(box[:4]).astype(int)

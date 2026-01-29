@@ -4,6 +4,7 @@ import numpy as np
 
 from anime_face_detector import create_detector
 
+
 def test_new_implementation():
     # Create a dummy test image
     test_image = np.random.randint(0, 255, (512, 512, 3), dtype=np.uint8)

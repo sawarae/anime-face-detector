@@ -22,9 +22,11 @@ Homepage = "https://github.com/hysts/anime-face-detector"
 demo = ["gradio>=5.0.0"]
 dev = [
     "anime-face-detector[legacy]",
+    "poethepoet==0.40.0",
     "pre-commit>=3.0.0",
+    "pytest>=9.0.0",
     "ruff>=0.8.0",
-    "pytest>=9.0.0"
+    "ty==0.0.14",
 ]
 legacy = [
     "mmcv==2.1.0",
@@ -64,3 +66,16 @@ ignore = ["E501", "B028", "B905"]
 
 [tool.ruff.format]
 quote-style = "single"
+
+[tool.poe]
+executor = { type = "uv", no-project = true }
+verbosity = 0
+
+[tool.poe.tasks]
+precommit = ["ty_check", "ruff_fix"]
+ruff_fix = "ruff check --fix"
+sync = "uv sync"
+ty_check = "ty check src"
+
+[tool.ty.src]
+exclude = [".venv/**", "venv/**", "build/**"]
