@@ -71,7 +71,7 @@ executor = { type = "uv", no-project = true }
 verbosity = 0
 
 [tool.poe.tasks]
-download_image_png = "curl -L https://www.pngarc.com/wp-content/uploads/2024/02/34.34-min.png -o tests/assets/image.png"
+download_image_png = "curl -L https://private-user-images.githubusercontent.com/3664/542476758-9d9898a7-ecc0-4628-b28c-0f359ee09204.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Njk3Mjc2MTgsIm5iZiI6MTc2OTcyNzMxOCwicGF0aCI6Ii8zNjY0LzU0MjQ3Njc1OC05ZDk4OThhNy1lY2MwLTQ2MjgtYjI4Yy0wZjM1OWVlMDkyMDQucG5nP1gtQW16LUFsZ29yaXRobT1BV1M0LUhNQUMtU0hBMjU2JlgtQW16LUNyZWRlbnRpYWw9QUtJQVZDT0RZTFNBNTNQUUs0WkElMkYyMDI2MDEyOSUyRnVzLWVhc3QtMSUyRnMzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyNjAxMjlUMjI1NTE4WiZYLUFtei1FeHBpcmVzPTMwMCZYLUFtei1TaWduYXR1cmU9OTczYmRiODk4NGJjMmQ4Mjg0ODk1YWVkNmVlZjM4MzIzZmY4MmI1YWE2YzY0OTNhMGIyM2U4Yjg5M2I5MGE3YyZYLUFtei1TaWduZWRIZWFkZXJzPWhvc3QifQ.C-5qvmA7QX4raSNASL-Z0ygDsDeBsAhbq2rDKJHJZes -o tests/assets/image.png"
 precommit = ["sync", "ty_check", "ruff_fix", "test"]
 ruff_fix = "ruff check --fix"
 sync = "uv sync"
