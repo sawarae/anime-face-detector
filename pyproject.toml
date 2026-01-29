@@ -5,9 +5,9 @@ description = "Anime Face Detector using YOLOv8 and HRNetV2 (pure PyTorch)"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "hysts" }]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10"
 dependencies = [
-    "numpy>=1.21.3,<2.3",
+    "numpy>=1.21.3",
     "opencv-python-headless>=4.5.4.58",
     "torch==2.9.1",
     "torchvision==0.24.1",
@@ -21,7 +21,6 @@ Homepage = "https://github.com/hysts/anime-face-detector"
 [project.optional-dependencies]
 demo = ["gradio>=5.0.0"]
 dev = [
-    "anime-face-detector[legacy]",
     "poethepoet==0.40.0",
     "pre-commit>=3.0.0",
     "pytest>=9.0.0",
@@ -72,9 +71,10 @@ executor = { type = "uv", no-project = true }
 verbosity = 0
 
 [tool.poe.tasks]
-precommit = ["ty_check", "ruff_fix"]
+precommit = ["ty_check", "ruff_fix", "test"]
 ruff_fix = "ruff check --fix"
 sync = "uv sync"
+test = "pytest"
 ty_check = "ty check src"
 
 [tool.ty.src]
