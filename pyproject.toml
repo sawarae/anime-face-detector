@@ -71,7 +71,7 @@ executor = { type = "uv", no-project = true }
 verbosity = 0
 
 [tool.poe.tasks]
-precommit = ["ty_check", "ruff_fix", "test"]
+precommit = ["sync", "ty_check", "ruff_fix", "test"]
 ruff_fix = "ruff check --fix"
 sync = "uv sync"
 test = "pytest"
