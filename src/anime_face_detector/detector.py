@@ -10,7 +10,6 @@ import warnings
 
 import cv2
 import numpy as np
-import torch
 
 try:
     from ultralytics import YOLO
@@ -44,10 +43,14 @@ class LandmarkDetector:
         self.box_scale_factor = box_scale_factor
 
         # Initialize HRNetV2 landmark detector
-        self.landmark_detector = self._init_hrnetv2(landmark_detector_checkpoint_path, device)
+        self.landmark_detector = self._init_hrnetv2(
+            landmark_detector_checkpoint_path, device
+        )
 
         # Initialize YOLOv8 face detector
-        self.face_detector = self._init_yolo_detector(face_detector_checkpoint_path, device)
+        self.face_detector = self._init_yolo_detector(
+            face_detector_checkpoint_path, device
+        )
 
     def _init_hrnetv2(
         self, checkpoint_path: str | pathlib.Path, device: str
@@ -114,6 +117,8 @@ class LandmarkDetector:
         Returns:
             List of bounding boxes with format [x0, y0, x1, y1, score]
         """
+        if self.face_detector is None:
+            raise ValueError('Face detector is not initialized.')
         # Run inference
         results = self.face_detector(image, verbose=False)
 
@@ -156,7 +161,9 @@ class LandmarkDetector:
         return boxes
 
     @staticmethod
-    def _load_image(image_or_path: np.ndarray | str | pathlib.Path) -> np.ndarray:
+    def _load_image(
+        image_or_path: np.ndarray | str | pathlib.Path,
+    ) -> np.ndarray:
         """Load image from path or return numpy array.
 
         Args:
@@ -173,6 +180,9 @@ class LandmarkDetector:
             image = cv2.imread(image_or_path.as_posix())
         else:
             raise ValueError('Invalid image type')
+
+        if image is None:
+            raise ValueError('Failed to load image')
         return image
 
     def __call__(

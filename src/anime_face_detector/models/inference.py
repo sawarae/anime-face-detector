@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import cv2
 import numpy as np
 import torch
+from cv2.typing import MatLike
 
 
 def get_affine_transform(center, scale, rot, output_size, shift=(0.0, 0.0), inv=False):
@@ -62,10 +65,13 @@ def get_affine_transform(center, scale, rot, output_size, shift=(0.0, 0.0), inv=
     src[2:, :] = get_3rd_point(src[0, :], src[1, :])
     dst[2:, :] = get_3rd_point(dst[0, :], dst[1, :])
 
+    src_mat = cast(MatLike, np.float32(src))
+    dst_mat = cast(MatLike, np.float32(dst))
+
     if inv:
-        trans = cv2.getAffineTransform(np.float32(dst), np.float32(src))
+        trans = cv2.getAffineTransform(dst_mat, src_mat)
     else:
-        trans = cv2.getAffineTransform(np.float32(src), np.float32(dst))
+        trans = cv2.getAffineTransform(src_mat, dst_mat)
 
     return trans
 
@@ -144,7 +150,9 @@ def affine_transform_keypoints(keypoints, trans_matrix):
     Returns:
         Transformed keypoints, shape (K, 2)
     """
-    keypoints_homo = np.concatenate([keypoints, np.ones((keypoints.shape[0], 1))], axis=1)
+    keypoints_homo = np.concatenate(
+        [keypoints, np.ones((keypoints.shape[0], 1))], axis=1
+    )
     keypoints_trans = keypoints_homo @ trans_matrix.T
     return keypoints_trans
 
@@ -184,17 +192,29 @@ def decode_heatmaps(heatmaps, input_size=(256, 256)):
             # Calculate derivatives for Taylor expansion
             diff_x = (heatmaps[i, py, px + 1] - heatmaps[i, py, px - 1]) / 2.0
             diff_y = (heatmaps[i, py + 1, px] - heatmaps[i, py - 1, px]) / 2.0
-            diff_xx = heatmaps[i, py, px + 1] - 2 * heatmaps[i, py, px] + heatmaps[i, py, px - 1]
-            diff_yy = heatmaps[i, py + 1, px] - 2 * heatmaps[i, py, px] + heatmaps[i, py - 1, px]
-            diff_xy = (heatmaps[i, py + 1, px + 1] - heatmaps[i, py + 1, px - 1] -
-                      heatmaps[i, py - 1, px + 1] + heatmaps[i, py - 1, px - 1]) / 4.0
+            diff_xx = (
+                heatmaps[i, py, px + 1]
+                - 2 * heatmaps[i, py, px]
+                + heatmaps[i, py, px - 1]
+            )
+            diff_yy = (
+                heatmaps[i, py + 1, px]
+                - 2 * heatmaps[i, py, px]
+                + heatmaps[i, py - 1, px]
+            )
+            diff_xy = (
+                heatmaps[i, py + 1, px + 1]
+                - heatmaps[i, py + 1, px - 1]
+                - heatmaps[i, py - 1, px + 1]
+                + heatmaps[i, py - 1, px - 1]
+            ) / 4.0
 
             # Calculate offset
             derivative = np.array([diff_x, diff_y])
             hessian = np.array([[diff_xx, diff_xy], [diff_xy, diff_yy]])
 
             # Avoid division by zero
-            if diff_xx * diff_yy - diff_xy ** 2 != 0:
+            if diff_xx * diff_yy - diff_xy**2 != 0:
                 offset = -np.linalg.inv(hessian) @ derivative
                 # Limit offset to [-0.5, 0.5]
                 offset = np.clip(offset, -0.5, 0.5)
@@ -216,7 +236,9 @@ def decode_heatmaps(heatmaps, input_size=(256, 256)):
     return keypoints, scores
 
 
-def inference_single_image(model, image, box, device='cuda:0', input_size=(256, 256), scale_factor=1.25):
+def inference_single_image(
+    model, image, box, device='cuda:0', input_size=(256, 256), scale_factor=1.25
+):
     """Run inference on a single image with a single bounding box.
 
     Args:
@@ -267,7 +289,9 @@ def inference_single_image(model, image, box, device='cuda:0', input_size=(256, 
     return keypoints, scores
 
 
-def inference_batch(model, image, boxes, device='cuda:0', input_size=(256, 256), scale_factor=1.25):
+def inference_batch(
+    model, image, boxes, device='cuda:0', input_size=(256, 256), scale_factor=1.25
+):
     """Run inference on a single image with multiple bounding boxes.
 
     Args:
@@ -288,7 +312,9 @@ def inference_batch(model, image, boxes, device='cuda:0', input_size=(256, 256),
 
     results = []
     for box in boxes:
-        keypoints, scores = inference_single_image(model, image, box, device, input_size, scale_factor)
+        keypoints, scores = inference_single_image(
+            model, image, box, device, input_size, scale_factor
+        )
 
         # Combine keypoints and scores
         keypoints_with_scores = np.concatenate(

@@ -4,6 +4,7 @@ Pure PyTorch implementation using YOLOv8 and HRNetV2.
 """
 
 import pathlib
+import warnings
 
 import torch
 
@@ -97,6 +98,38 @@ def create_detector(
         box_scale_factor=box_scale_factor,
     )
     return model
+
+
+def get_config_path(model_name: str, *, deprecated_ok: bool = False) -> pathlib.Path:
+    """Get the path to a built-in config file.
+
+    Deprecated:
+        This function is deprecated. Prefer importing configs from
+        `anime_face_detector.configs` (or whichever new API you standardize on).
+
+    Args:
+        model_name: Name of the model config.
+        deprecated_ok: Set True to acknowledge the deprecation and suppress the warning.
+
+    Returns:
+        Path to the config file.
+    """
+    if not deprecated_ok:
+        warnings.warn(
+            "get_config_path() is deprecated as part of the legacy api and will be removed in a future release. "
+            "Pass deprecated_ok=True to acknowledge for now, and migrate to the new API.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+
+    assert model_name in ['faster-rcnn', 'yolov3', 'hrnetv2']
+
+    package_path = pathlib.Path(__file__).parent.resolve()
+    if model_name in ['faster-rcnn', 'yolov3']:
+        config_dir = package_path / 'configs' / 'mmdet'
+    else:
+        config_dir = package_path / 'configs' / 'mmpose'
+    return config_dir / f'{model_name}.py'
 
 
 __all__ = ['create_detector', 'LandmarkDetector']
