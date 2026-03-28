@@ -1,0 +1,46 @@
+# Data directories
+data/raw/*
+data/annotated/*
+data/datasets/*
+
+# Keep directory structure
+!data/raw/.gitkeep
+!data/annotated/.gitkeep
+!data/datasets/.gitkeep
+
+# Checkpoints and models
+checkpoints/*
+!checkpoints/.gitkeep
+
+# Evaluation results
+eval_results/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# TensorBoard
+runs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# uv
+.uv/

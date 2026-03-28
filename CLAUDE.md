@@ -148,6 +148,49 @@ ruff check .        # リント
 ruff format .       # フォーマット
 ```
 
+## カスタムモデルの学習
+
+動物キャラクターなどの特徴点検出モデルを学習する場合は、`training/`ディレクトリを使用します。
+
+### 学習ツール
+
+`training/`ディレクトリには以下のツールが含まれています：
+
+1. **画像クローリング** (`tools/crawl_images.py`): Safebooru/Danbooru/Gelbooruから画像を収集
+2. **アノテーションツール** (`tools/annotate_landmarks.py`): Gradioベースの28点ランドマーク編集ツール
+3. **学習スクリプト** (`scripts/train.py`): HRNetV2の転移学習・ファインチューニング
+4. **評価スクリプト** (`scripts/evaluate.py`): NMEなどのメトリクス計算と可視化
+
+### クイックスタート
+
+```bash
+cd training
+
+# 1. 環境構築
+uv pip install -e .
+
+# 2. 画像収集
+python tools/crawl_images.py --source safebooru --tags "animal_ears" --limit 100
+
+# 3. アノテーション（人間が作業）
+python tools/annotate_landmarks.py --image-dir data/raw --output-dir data/annotated
+
+# 4. 学習
+python scripts/train.py \
+    --image-dir data/raw \
+    --annotation-dir data/annotated \
+    --checkpoint ../anime_face_detector/models/weights/mmpose_anime-face_hrnetv2.pth \
+    --epochs 50
+
+# 5. 評価
+python scripts/evaluate.py \
+    --checkpoint checkpoints/best_model.pth \
+    --image-dir data/raw \
+    --annotation-dir data/annotated
+```
+
+詳細は[training/README.md](training/README.md)を参照してください。
+
 ## 移行ガイド（旧版から）
 
 ### 主な変更点
